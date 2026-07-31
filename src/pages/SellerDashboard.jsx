@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Eye, LayoutDashboard, PackagePlus, Store } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
 import { categories } from '../data/marketplace.js'
@@ -9,6 +10,13 @@ function splitLocation(location = '') {
 
   return { city, state }
 }
+
+const sellerTabs = [
+  { key: 'booth', label: 'Booth Details', Icon: Store },
+  { key: 'list', label: 'List an Item', Icon: PackagePlus },
+  { key: 'items', label: 'Listed Items', Icon: LayoutDashboard },
+  { key: 'view', label: 'View Booth', Icon: Eye },
+]
 
 function SellerDashboard() {
   const { profile, user } = useAuth()
@@ -303,37 +311,6 @@ function SellerDashboard() {
         </p>
       </section>
 
-      <section className="seller-tabs" aria-label="Seller dashboard sections">
-        <button
-          className={activeTab === 'booth' ? 'seller-tab seller-tab-active' : 'seller-tab'}
-          onClick={() => setActiveTab('booth')}
-          type="button"
-        >
-          Booth Details
-        </button>
-        <button
-          className={activeTab === 'list' ? 'seller-tab seller-tab-active' : 'seller-tab'}
-          onClick={() => setActiveTab('list')}
-          type="button"
-        >
-          List an Item
-        </button>
-        <button
-          className={activeTab === 'items' ? 'seller-tab seller-tab-active' : 'seller-tab'}
-          onClick={() => setActiveTab('items')}
-          type="button"
-        >
-          Listed Items
-        </button>
-        <button
-          className={activeTab === 'view' ? 'seller-tab seller-tab-active' : 'seller-tab'}
-          onClick={() => setActiveTab('view')}
-          type="button"
-        >
-          View Booth
-        </button>
-      </section>
-
       {activeTab === 'booth' && (
       <section className="onboarding-card seller-manage-card">
         <p className="eyebrow">Manage booth</p>
@@ -588,6 +565,20 @@ function SellerDashboard() {
           </div>
         </section>
       )}
+
+      <nav className="seller-bottom-tabs" aria-label="Seller dashboard sections">
+        {sellerTabs.map(({ Icon, key, label }) => (
+          <button
+            className={activeTab === key ? 'seller-bottom-tab seller-bottom-tab-active' : 'seller-bottom-tab'}
+            key={key}
+            onClick={() => setActiveTab(key)}
+            type="button"
+          >
+            <Icon aria-hidden="true" size={21} strokeWidth={2.4} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
