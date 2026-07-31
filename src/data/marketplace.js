@@ -17,5 +17,6 @@ export const categories = [
   'Woodwork',
   'Soaps',
   'Jewelry',
+  'Toys',
   'Original goods',
 ]
