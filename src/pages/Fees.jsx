@@ -1,8 +1,8 @@
 const feeRows = [
-  { label: 'Listing fee', value: '$0 while Krafzee is in preview' },
-  { label: 'Seller booth', value: 'Free basic booth page' },
-  { label: 'Payment processing', value: 'Not available yet' },
-  { label: 'Final value fee', value: 'Not added yet' },
+  { label: 'Listing fee', value: '$0' },
+  { label: 'Relisting fee', value: '$0' },
+  { label: 'Seller booth', value: 'Free booth page' },
+  { label: 'Krafzee commission', value: '7% when buyers pay' },
 ]
 
 function Fees() {
@@ -10,11 +10,11 @@ function Fees() {
     <div className="page-stack">
       <section className="page-intro">
         <p className="eyebrow">Seller fees</p>
-        <h1>Simple marketplace pricing before payments arrive.</h1>
+        <h1>Free to list. Simple commission when payments arrive.</h1>
         <p>
-          Krafzee can publish booth and listing pages now. Payment collection,
-          transaction fees, and payout settings are intentionally out of scope
-          for this build.
+          There are no fees to open a booth, list an item, or relist an item on
+          Krafzee. When buyer payments are added, Krafzee will collect a 7%
+          commission on paid orders.
         </p>
       </section>
 

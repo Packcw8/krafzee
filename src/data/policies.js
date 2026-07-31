@@ -39,8 +39,8 @@ export const policies = {
     title: 'Fee Policy',
     eyebrow: 'Fee transparency',
     body: [
-      'This placeholder policy explains booth fees, listing fees, transaction fees, and any future market charges.',
-      'Payments are not built yet, and Krafzee should show sellers fee changes before those changes apply.',
+      'There are no fees to open a booth, list an item, or relist an item on Krafzee.',
+      'When buyer payments are added, Krafzee will collect a 7% commission on paid orders.',
       'This page is a placeholder and should be updated before any paid feature is introduced.',
     ],
   },

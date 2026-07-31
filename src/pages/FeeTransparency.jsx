@@ -16,19 +16,20 @@ function FeeTransparency() {
       <div className="fees-table onboarding-fees" aria-label="Seller fee preview">
         <div className="fee-row">
           <span>Opening a booth</span>
-          <strong>No charge in preview</strong>
+          <strong>No charge</strong>
         </div>
         <div className="fee-row">
           <span>Listing goods</span>
-          <strong>No listing fee in preview</strong>
+          <strong>No listing or relisting fees</strong>
         </div>
         <div className="fee-row">
-          <span>Payment handling</span>
-          <strong>Not built yet</strong>
+          <span>Krafzee commission</span>
+          <strong>7% when buyers pay</strong>
         </div>
       </div>
       <p className="helper-note">
-        Krafzee will show fee changes plainly before they affect sellers.
+        Payment collection is not built yet. Krafzee will show fee changes
+        plainly before they affect sellers.
       </p>
     </OnboardingShell>
   )
