@@ -46,7 +46,7 @@ function Listing() {
     return (
       <article className="state-card">
         <h1>Loading listing</h1>
-        <p>Checking the live market table.</p>
+        <p>Checking the market table.</p>
       </article>
     )
   }

@@ -63,7 +63,7 @@ function Browse() {
       {isLoading && (
         <article className="state-card">
           <h2>Setting up the booth tables</h2>
-          <p>Fetching the latest Krafzee booths from Supabase.</p>
+          <p>Gathering the latest maker booths.</p>
         </article>
       )}
 
@@ -76,8 +76,8 @@ function Browse() {
 
       {!isLoading && !error && booths.length === 0 && (
         <article className="state-card">
-          <h2>No booths yet</h2>
-          <p>Add rows to the booths table to start filling the handmade market.</p>
+          <h2>No booths are open yet</h2>
+          <p>Check back soon as makers begin setting up their tables.</p>
         </article>
       )}
 

@@ -60,18 +60,15 @@ function Home() {
 
       <section className="section">
         <div className="section-heading">
-          <p className="eyebrow">Live market</p>
-          <h2>Real booths appear as sellers open their tables</h2>
+          <p className="eyebrow">Open booths</p>
+          <h2>See what makers are bringing to market</h2>
         </div>
         <article className="state-card">
-          <h3>No seeded listings</h3>
-          <p>
-            Krafzee now shows live Supabase booths instead of template products.
-            Head to Browse to see what sellers have opened.
-          </p>
+          <h3>Fresh booths are setting up</h3>
+          <p>Explore the market as makers open their tables and add new work.</p>
           <div className="hero-actions">
             <Link className="button button-primary" to="/browse">
-              Browse live booths
+              Browse booths
             </Link>
           </div>
         </article>

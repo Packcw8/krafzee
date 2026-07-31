@@ -32,8 +32,8 @@ function SellerProfileSetup() {
         </label>
       </form>
       <p className="helper-note">
-        These fields are a setup preview for now. Booth saving can connect to
-        your database once the product flow is ready.
+        Keep it simple and welcoming. Shoppers should know what you bring to
+        the market and where your booth feels at home.
       </p>
     </OnboardingShell>
   )
