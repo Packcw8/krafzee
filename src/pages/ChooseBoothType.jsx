@@ -23,14 +23,6 @@ function ChooseBoothType() {
             batches, and goods made by hand.
           </p>
         </article>
-        <article className="choice-card">
-          <p className="eyebrow">Jumble row</p>
-          <h2>Jumble Market</h2>
-          <p>
-            Best for tools, car parts, furniture, electronics, collectibles,
-            garden goods, records, salvage, and yard sale finds.
-          </p>
-        </article>
       </div>
     </OnboardingShell>
   )

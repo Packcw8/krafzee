@@ -25,7 +25,7 @@ function AdminDashboard() {
         </article>
         <article className="dashboard-card">
           <h2>Market health</h2>
-          <p>Track the Handmade Market, Jumble Market, and project board sections.</p>
+          <p>Track the Handmade Market and project board sections.</p>
         </article>
       </section>
     </div>

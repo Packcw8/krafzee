@@ -2,30 +2,22 @@ export const marketSections = [
   {
     key: 'handmade',
     title: 'Handmade & Artisan Market',
-    eyebrow: 'USA handmade aisle',
+    eyebrow: 'Curated maker booths',
     description:
       'USA hand-crafted products created in the USA. Shop maker booths for ceramics, textiles, prints, candles, woodwork, soaps, jewelry, and original goods made by hand.',
-    action: 'Shop USA Handmade',
-  },
-  {
-    key: 'trading_post',
-    title: 'Jumble Market',
-    eyebrow: 'Yard sale aisle',
-    description:
-      'An online yard sale aisle for tools, car parts, furniture, electronics, collectibles, records, garden items, salvage, and useful odds and ends.',
-    action: 'Shop the Jumble Market',
+    action: 'Shop handmade booths',
   },
 ]
 
 export const categories = [
   'Ceramics',
   'Textiles',
-  'Tools',
-  'Car parts',
-  'Furniture',
-  'Electronics',
-  'Collectibles',
-  'Garden',
+  'Prints',
+  'Candles',
+  'Woodwork',
+  'Soaps',
+  'Jewelry',
+  'Original goods',
 ]
 
 export const booths = [
@@ -33,19 +25,19 @@ export const booths = [
     id: 'vintage-table',
     name: 'Vintage Table Finds',
     owner_name: 'Maya R.',
-    bio: 'Maya keeps a small booth of practical pieces with a little age on them, picked from estate sales and Saturday markets.',
+    bio: 'Maya keeps a small booth of hand-finished home goods and warm studio pieces.',
     location: 'Asheville, NC',
-    description: 'Restored home goods, warm brass accents, crates, lamps, and other useful flea market finds.',
-    market_type: 'trading_post',
+    description: 'Hand-finished home goods, small wood pieces, and warm studio accents.',
+    market_type: 'handmade',
   },
   {
     id: 'thread-and-tin',
     name: 'Thread & Tin',
     owner_name: 'Jon P.',
-    bio: 'Jon repairs, cleans, and tags the kinds of goods that feel right at home in a garage, workshop, or porch.',
+    bio: 'Jon creates durable textile goods with workshop-inspired details and practical finishes.',
     location: 'Columbus, OH',
-    description: 'Workwear, enamel signs, weekend salvage, hand tools, and booth-ready odds and ends.',
-    market_type: 'trading_post',
+    description: 'Canvas totes, stitched pouches, aprons, and practical handmade textile goods.',
+    market_type: 'handmade',
   },
   {
     id: 'clay-and-thread',
@@ -64,19 +56,19 @@ export const listings = [
     booth_id: 'vintage-table',
     title: 'Brass Desk Lamp',
     price: '$68',
-    category: 'Vintage',
-    market_type: 'trading_post',
+    category: 'Woodwork',
+    market_type: 'handmade',
     image_url: '',
     description:
-      'A solid brass desk lamp with a soft patina, rewired cord, and a small pull chain shade.',
+      'A studio-built desk lamp with a warm finish, simple lines, and handmade details.',
   },
   {
     id: 'oak-market-crate',
     booth_id: 'vintage-table',
     title: 'Oak Market Crate',
     price: '$34',
-    category: 'Furniture',
-    market_type: 'trading_post',
+    category: 'Woodwork',
+    market_type: 'handmade',
     image_url: '',
     description:
       'Stackable oak crate sized for records, linens, pantry overflow, or a booth display.',

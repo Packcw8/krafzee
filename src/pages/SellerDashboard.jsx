@@ -3,20 +3,6 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 
-const marketOptions = [
-  {
-    value: 'handmade',
-    title: 'Handmade & Artisan Market',
-    description: 'USA hand-crafted products created in the USA.',
-  },
-  {
-    value: 'jumble_market',
-    title: 'Jumble Market',
-    description:
-      'Tools, car parts, furniture, electronics, collectibles, garden goods, salvage, and useful odds and ends.',
-  },
-]
-
 function splitLocation(location = '') {
   const [city = '', state = ''] = location.split(',').map((item) => item.trim())
 
@@ -32,7 +18,6 @@ function SellerDashboard() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [marketType, setMarketType] = useState('handmade')
   const [sellerBio, setSellerBio] = useState('')
   const [stateName, setStateName] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -71,7 +56,6 @@ function SellerDashboard() {
         setSellerBio(data.bio ?? '')
         setCity(locationParts.city)
         setStateName(locationParts.state)
-        setMarketType(data.market_type ?? 'handmade')
       } else {
         setBooth(null)
       }
@@ -104,7 +88,7 @@ function SellerDashboard() {
       owner_name: ownerName,
       bio: sellerBio.trim(),
       location: `${city.trim()}, ${stateName.trim()}`,
-      market_type: marketType,
+      market_type: 'handmade',
     }
 
     const { data, error: saveError } = await supabase
@@ -166,7 +150,7 @@ function SellerDashboard() {
         </article>
         <article className="dashboard-card">
           <h2>Market aisle</h2>
-          <p>{booth.market_type === 'handmade' ? 'Handmade & Artisan Market' : 'Jumble Market'}</p>
+          <p>Handmade & Artisan Market</p>
         </article>
         <article className="dashboard-card">
           <h2>Public booth</h2>
@@ -231,26 +215,12 @@ function SellerDashboard() {
             />
           </label>
 
-          <fieldset className="market-choice-fieldset">
-            <legend>Choose your market aisle</legend>
-            <div className="choice-grid">
-              {marketOptions.map((option) => (
-                <label className="market-choice-card" key={option.value}>
-                  <input
-                    checked={marketType === option.value}
-                    name="market_type"
-                    onChange={() => setMarketType(option.value)}
-                    type="radio"
-                    value={option.value}
-                  />
-                  <span>
-                    <strong>{option.title}</strong>
-                    <small>{option.description}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          <article className="market-choice-card market-choice-static">
+            <span>
+              <strong>Handmade & Artisan Market</strong>
+              <small>USA hand-crafted products created in the USA.</small>
+            </span>
+          </article>
 
           {error && <p className="form-error">{error}</p>}
           {successMessage && <p className="form-success">{successMessage}</p>}

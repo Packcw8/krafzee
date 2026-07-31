@@ -3,55 +3,52 @@ import { categories, listings, marketSections } from '../data/marketplace.js'
 
 function Home() {
   const featured = listings.slice(0, 3)
+  const primaryMarket = marketSections[0]
 
   return (
     <div className="page-stack">
       <section className="hero-section">
         <div>
-          <p className="eyebrow">Online flea market and yard sale</p>
-          <h1>One Krafzee market, two good aisles to wander.</h1>
+          <p className="eyebrow">Modern handmade marketplace</p>
+          <h1>Discover maker booths with goods worth keeping.</h1>
           <p className="hero-copy">
-            Shop USA handmade goods from maker booths, then cross the walkway
-            into the Jumble Market for yard sale finds, tools, parts, furniture,
-            electronics, collectibles, and useful odds and ends.
+            Krafzee is a curated online market for USA hand-crafted products
+            created in the USA. Walk clean, independent booths for ceramics,
+            textiles, prints, candles, woodwork, soaps, jewelry, and original
+            goods made by hand.
           </p>
           <div className="hero-actions">
             <Link className="button button-primary" to="/browse">
-              Walk the market
+              Shop handmade booths
             </Link>
-            <Link className="button button-secondary" to="/fees">
-              View booth fees
+            <Link className="button button-secondary" to="/open-your-booth">
+              Open your booth
             </Link>
           </div>
         </div>
         <div className="market-note market-board" aria-label="Marketplace highlights">
-          <strong>Market map</strong>
+          <strong>Krafzee at a glance</strong>
           <span>Handmade & Artisan Market</span>
-          <span>Jumble Market</span>
-          <span>Booths, project boards, and fresh finds</span>
+          <span>USA hand-crafted products</span>
+          <span>Booths, project boards, and original goods</span>
         </div>
       </section>
 
-      <section className="market-section-grid" aria-label="Krafzee market sections">
-        {marketSections.map((section) => (
-          <article
-            className={`market-section-card market-section-${section.key}`}
-            key={section.key}
-          >
-            <p className="eyebrow">{section.eyebrow}</p>
-            <h2>{section.title}</h2>
-            <p>{section.description}</p>
-            <Link className="button button-secondary" to="/browse">
-              {section.action}
-            </Link>
-          </article>
-        ))}
+      <section className="market-section-grid market-section-grid-single" aria-label="Krafzee market">
+        <article className="market-section-card market-section-handmade">
+          <p className="eyebrow">{primaryMarket.eyebrow}</p>
+          <h2>{primaryMarket.title}</h2>
+          <p>{primaryMarket.description}</p>
+          <Link className="button button-secondary" to="/browse">
+            {primaryMarket.action}
+          </Link>
+        </article>
       </section>
 
       <section className="section">
         <div className="section-heading">
-          <p className="eyebrow">Market aisles</p>
-          <h2>Tables worth wandering</h2>
+          <p className="eyebrow">Shop by craft</p>
+          <h2>Find the maker table that fits your style</h2>
         </div>
         <div className="category-grid">
           {categories.map((category) => (
@@ -64,8 +61,8 @@ function Home() {
 
       <section className="section">
         <div className="section-heading">
-          <p className="eyebrow">Fresh from the booths</p>
-          <h2>Recently tacked to the board</h2>
+          <p className="eyebrow">Featured work</p>
+          <h2>Fresh from the booths</h2>
         </div>
         <div className="listing-grid">
           {featured.map((listing) => (

@@ -113,7 +113,7 @@ function Booth() {
   return (
     <div className="page-stack">
       <section className="page-intro">
-        <p className="eyebrow">{booth.market_type === 'handmade' ? 'Handmade booth' : 'Jumble Market booth'}</p>
+        <p className="eyebrow">Handmade booth</p>
         <h1>{booth.name}</h1>
         <p>{booth.description}</p>
       </section>

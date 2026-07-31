@@ -3,20 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 
-const marketOptions = [
-  {
-    value: 'handmade',
-    title: 'Handmade & Artisan Market',
-    description: 'USA hand-crafted products created in the USA.',
-  },
-  {
-    value: 'jumble_market',
-    title: 'Jumble Market',
-    description:
-      'Tools, car parts, furniture, electronics, collectibles, garden goods, salvage, and useful odds and ends.',
-  },
-]
-
 function OpenYourBooth() {
   const navigate = useNavigate()
   const { profile, refreshProfile, user } = useAuth()
@@ -26,7 +12,6 @@ function OpenYourBooth() {
   const [city, setCity] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [marketType, setMarketType] = useState('handmade')
   const [sellerBio, setSellerBio] = useState('')
   const [stateName, setStateName] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -78,7 +63,7 @@ function OpenYourBooth() {
       owner_name: ownerName,
       bio: sellerBio.trim(),
       location,
-      market_type: marketType,
+      market_type: 'handmade',
     }
 
     const { data: existingBooth, error: lookupError } = await supabase
@@ -191,26 +176,12 @@ function OpenYourBooth() {
           />
         </label>
 
-        <fieldset className="market-choice-fieldset">
-          <legend>Choose your market aisle</legend>
-          <div className="choice-grid">
-            {marketOptions.map((option) => (
-              <label className="market-choice-card" key={option.value}>
-                <input
-                  checked={marketType === option.value}
-                  name="market_type"
-                  onChange={() => setMarketType(option.value)}
-                  type="radio"
-                  value={option.value}
-                />
-                <span>
-                  <strong>{option.title}</strong>
-                  <small>{option.description}</small>
-                </span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <article className="market-choice-card market-choice-static">
+          <span>
+            <strong>Handmade & Artisan Market</strong>
+            <small>USA hand-crafted products created in the USA.</small>
+          </span>
+        </article>
 
         <label className="acceptance-check">
           <input
