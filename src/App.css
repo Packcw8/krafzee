@@ -34,23 +34,27 @@
   align-items: center;
   color: var(--ink);
   display: inline-flex;
-  font-size: 21px;
-  font-weight: 800;
-  gap: 10px;
+  flex: 0 0 auto;
   text-decoration: none;
 }
 
-.brand-mark {
-  align-items: center;
-  background:
-    linear-gradient(135deg, var(--green), #527da8);
-  border-radius: 10px;
-  box-shadow: inset 0 -3px 0 rgba(31, 42, 61, 0.18);
-  color: #fffaf2;
-  display: inline-flex;
-  height: 36px;
-  justify-content: center;
-  width: 36px;
+.brand-logo {
+  display: block;
+  height: 52px;
+  object-fit: contain;
+  width: auto;
+}
+
+.sr-only {
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 .nav-links {
@@ -195,6 +199,17 @@
   border-top: 1px solid var(--border);
   color: var(--muted);
   padding-top: 12px;
+}
+
+.hero-logo-board {
+  justify-items: center;
+  text-align: center;
+}
+
+.hero-logo {
+  display: block;
+  max-width: min(100%, 360px);
+  width: 100%;
 }
 
 .market-section-grid {
@@ -799,6 +814,10 @@ dd {
   .site-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .brand-logo {
+    height: 44px;
   }
 
   .nav-links {

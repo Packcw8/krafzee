@@ -25,11 +25,9 @@ function Home() {
             </Link>
           </div>
         </div>
-        <div className="market-note market-board" aria-label="Marketplace highlights">
-          <strong>Krafzee at a glance</strong>
-          <span>Handmade & Artisan Market</span>
-          <span>USA hand-crafted products</span>
-          <span>Booths, project boards, and original goods</span>
+        <div className="market-note market-board hero-logo-board" aria-label="Krafzee marketplace sign">
+          <img className="hero-logo" src="/KrafZeeLogo.png" alt="KrafZee.com USA" />
+          <span>USA handmade booths, project boards, and original goods.</span>
         </div>
       </section>
 

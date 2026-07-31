@@ -14,8 +14,8 @@ function Navbar() {
   return (
     <header className="site-header">
       <NavLink className="brand" to="/" aria-label="Krafzee home">
-        <span className="brand-mark">K</span>
-        <span>Krafzee</span>
+        <img className="brand-logo" src="/KrafZeeLogo.png" alt="" />
+        <span className="sr-only">Krafzee</span>
       </NavLink>
 
       <nav className="nav-links" aria-label="Main navigation">
