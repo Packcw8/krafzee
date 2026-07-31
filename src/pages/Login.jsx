@@ -3,6 +3,16 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
 import { supabase } from '../lib/supabase.js'
 
+function getLoginErrorMessage(message) {
+  const normalizedMessage = message.toLowerCase()
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return 'Please confirm your email before logging in. Check your inbox or resend the confirmation email below.'
+  }
+
+  return message
+}
+
 function Login() {
   const { user } = useAuth()
   const location = useLocation()
@@ -11,6 +21,7 @@ function Login() {
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [password, setPassword] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const from = location.state?.from?.pathname ?? '/browse'
 
   if (user) {
@@ -20,21 +31,51 @@ function Login() {
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setSuccessMessage('')
     setIsSubmitting(true)
 
     const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     })
 
     setIsSubmitting(false)
 
     if (loginError) {
-      setError(loginError.message)
+      setError(getLoginErrorMessage(loginError.message))
       return
     }
 
     navigate(from, { replace: true })
+  }
+
+  async function resendConfirmation() {
+    setError('')
+    setSuccessMessage('')
+
+    if (!email.trim()) {
+      setError('Enter your email address first, then resend the confirmation email.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    })
+
+    setIsSubmitting(false)
+
+    if (resendError) {
+      setError(resendError.message)
+      return
+    }
+
+    setSuccessMessage('Confirmation email sent. Check your inbox and spam folder.')
   }
 
   return (
@@ -66,9 +107,18 @@ function Login() {
         </label>
 
         {error && <p className="form-error">{error}</p>}
+        {successMessage && <p className="form-success">{successMessage}</p>}
 
         <button className="button button-primary" disabled={isSubmitting} type="submit">
           {isSubmitting ? 'Opening gate...' : 'Log in'}
+        </button>
+        <button
+          className="button button-secondary"
+          disabled={isSubmitting}
+          onClick={resendConfirmation}
+          type="button"
+        >
+          Resend confirmation email
         </button>
       </form>
 

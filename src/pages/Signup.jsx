@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
 function getSignupErrorMessage(message) {
@@ -11,7 +11,6 @@ function getSignupErrorMessage(message) {
 }
 
 function Signup() {
-  const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
@@ -26,12 +25,13 @@ function Signup() {
     setIsSubmitting(true)
 
     const { data, error: signupError } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: {
         data: {
-          display_name: displayName,
+          display_name: displayName.trim(),
         },
+        emailRedirectTo: window.location.origin,
       },
     })
 
@@ -43,11 +43,13 @@ function Signup() {
     }
 
     if (!data.session) {
-      setSuccessMessage('Account created. Check your email to confirm it, then log in to open your booth.')
+      setSuccessMessage(
+        'Check your email to confirm your Krafzee account. After you confirm it, come back here and log in.',
+      )
       return
     }
 
-    navigate('/browse')
+    setSuccessMessage('Your account is ready. You can log in and walk the market.')
   }
 
   return (

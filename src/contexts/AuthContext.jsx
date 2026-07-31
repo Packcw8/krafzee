@@ -10,18 +10,37 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true
 
-    async function loadProfile(userId) {
+    async function loadProfile(user) {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, display_name, role')
-        .eq('id', userId)
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (error || data) {
+        return data ?? null
+      }
+
+      const displayName =
+        user.user_metadata?.display_name ||
+        user.email?.split('@')[0] ||
+        'Krafzee shopper'
+
+      const { data: createdProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          display_name: displayName,
+          role: 'buyer',
+        })
+        .select('id, display_name, role')
         .single()
 
-      if (error) {
+      if (createError) {
         return null
       }
 
-      return data
+      return createdProfile
     }
 
     async function loadSession() {
@@ -35,7 +54,7 @@ export function AuthProvider({ children }) {
       setSession(currentSession)
 
       if (currentSession?.user) {
-        const userProfile = await loadProfile(currentSession.user.id)
+        const userProfile = await loadProfile(currentSession.user)
 
         if (isMounted) {
           setProfile(userProfile)
@@ -57,7 +76,7 @@ export function AuthProvider({ children }) {
       setSession(nextSession)
 
       if (nextSession?.user) {
-        setProfile(await loadProfile(nextSession.user.id))
+        setProfile(await loadProfile(nextSession.user))
       } else {
         setProfile(null)
       }
