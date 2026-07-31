@@ -859,6 +859,63 @@ dd {
   cursor: pointer;
 }
 
+.filter-chip-active {
+  background: var(--green);
+  color: #fffaf2;
+}
+
+.market-search-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 24, 39, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(16, 24, 39, 0.08);
+  padding: 18px;
+}
+
+.market-search-card label {
+  color: var(--ink);
+  display: grid;
+  font-weight: 900;
+  gap: 10px;
+}
+
+.market-search-card input {
+  background: #fff;
+  border: 1px solid rgba(16, 24, 39, 0.14);
+  border-radius: 14px;
+  color: var(--ink);
+  font-size: 16px;
+  padding: 14px 16px;
+}
+
+.market-search-card input:focus {
+  border-color: var(--green);
+  outline: 3px solid rgba(36, 74, 115, 0.18);
+}
+
+.scrolling-listing-row {
+  display: grid;
+  gap: 18px;
+  grid-auto-columns: minmax(260px, 340px);
+  grid-auto-flow: column;
+  overflow-x: auto;
+  padding: 4px 4px 18px;
+  scroll-snap-type: x proximity;
+}
+
+.scrolling-listing-row::-webkit-scrollbar {
+  height: 10px;
+}
+
+.scrolling-listing-row::-webkit-scrollbar-thumb {
+  background: rgba(31, 79, 138, 0.28);
+  border-radius: 999px;
+}
+
+.market-item-card {
+  scroll-snap-align: start;
+}
+
 .booth-panel {
   align-items: center;
   display: grid;
