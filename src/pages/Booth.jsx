@@ -3,6 +3,14 @@ import { Link, useParams } from 'react-router-dom'
 import ProjectCard from '../components/ProjectCard.jsx'
 import { supabase } from '../lib/supabase.js'
 
+function formatPrice(price) {
+  if (price === null || price === undefined || price === '') {
+    return 'Price not posted'
+  }
+
+  return `$${Number(price).toFixed(2)}`
+}
+
 function Booth() {
   const { boothId } = useParams()
   const [booth, setBooth] = useState(null)
@@ -38,7 +46,7 @@ function Booth() {
       ] = await Promise.all([
         supabase
           .from('booths')
-          .select('id, name, description, owner_name, bio, location, market_type')
+          .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url')
           .eq('id', boothId)
           .single(),
         supabase
@@ -120,7 +128,11 @@ function Booth() {
 
       <section className="booth-panel">
         <div>
-          <span className="booth-avatar">{booth.name.charAt(0)}</span>
+          {booth.thumbnail_url ? (
+            <img src={booth.thumbnail_url} alt="" className="booth-thumbnail" />
+          ) : (
+            <span className="booth-avatar">{booth.name.charAt(0)}</span>
+          )}
         </div>
         <div>
           <h2>Run by {booth.owner_name}</h2>
@@ -161,7 +173,7 @@ function Booth() {
                   <p>{listing.description}</p>
                 </div>
                 <div className="card-footer">
-                  <strong>{listing.price}</strong>
+                  <strong>{formatPrice(listing.price)}</strong>
                   <Link to={`/listing/${listing.id}`}>View listing</Link>
                 </div>
               </article>

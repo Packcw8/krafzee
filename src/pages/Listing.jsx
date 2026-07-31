@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase.js'
 
+function formatPrice(price) {
+  if (price === null || price === undefined || price === '') {
+    return ''
+  }
+
+  return `$${Number(price).toFixed(2)}`
+}
+
 function Listing() {
   const { listingId } = useParams()
   const [error, setError] = useState('')
@@ -87,7 +95,7 @@ function Listing() {
       <section className="listing-info">
         <p className="eyebrow">Handmade listing</p>
         <h1>{listing.title}</h1>
-        {listing.price && <strong className="price">{listing.price}</strong>}
+        {listing.price && <strong className="price">{formatPrice(listing.price)}</strong>}
         <p>{listing.description}</p>
 
         <dl className="detail-list">

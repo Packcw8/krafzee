@@ -17,7 +17,7 @@ function Browse() {
 
       const { data, error: boothError } = await supabase
         .from('booths')
-        .select('id, name, description, owner_name, bio, location, market_type')
+        .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url')
 
       if (!isMounted) {
         return
@@ -92,7 +92,11 @@ function Browse() {
           <div className="listing-grid" aria-label="Handmade maker booths">
             {booths.map((booth) => (
               <article className="listing-card" key={booth.id ?? booth.name}>
-                <span className="listing-image">Booth</span>
+                {booth.thumbnail_url ? (
+                  <img src={booth.thumbnail_url} alt="" className="card-image" />
+                ) : (
+                  <span className="listing-image">Booth</span>
+                )}
                 <div>
                   <h3>{booth.name}</h3>
                   <p>{booth.description}</p>

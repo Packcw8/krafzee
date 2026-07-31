@@ -1,9 +1,8 @@
 # Krafzee
 
-Krafzee is an online flea market and yard sale marketplace with two shopping aisles:
+Krafzee is a modern online handmade marketplace.
 
 - Handmade & Artisan Market: USA hand-crafted products created in the USA.
-- Jumble Market: tools, car parts, furniture, electronics, collectibles, garden goods, salvage, and useful odds and ends.
 
 ## Tech Stack
 
@@ -62,6 +61,21 @@ Expected core tables:
 - `projects`
 
 The app expects Supabase Auth users to have a matching `profiles` row. Booth management uses `auth.users.id` as `booths.owner_id`.
+
+## Supabase Migrations
+
+Run SQL files from `supabase/migrations` in Supabase SQL Editor when a feature needs database or storage changes.
+
+Current migrations:
+
+- `001_booth_thumbnail_storage.sql`
+- `002_listing_items_storage.sql`
+
+Run them in order.
+
+## Vercel Routing
+
+`vercel.json` rewrites app routes to `index.html` so pages like `/seller-dashboard` work after refresh.
 
 ## GitHub Notes
 
