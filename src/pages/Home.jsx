@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
-import { categories, listings, marketSections } from '../data/marketplace.js'
+import { categories, marketSections } from '../data/marketplace.js'
 
 function Home() {
-  const featured = listings.slice(0, 3)
   const primaryMarket = marketSections[0]
 
   return (
@@ -61,28 +60,21 @@ function Home() {
 
       <section className="section">
         <div className="section-heading">
-          <p className="eyebrow">Featured work</p>
-          <h2>Fresh from the booths</h2>
+          <p className="eyebrow">Live market</p>
+          <h2>Real booths appear as sellers open their tables</h2>
         </div>
-        <div className="listing-grid">
-          {featured.map((listing) => (
-            <article className="listing-card" key={listing.id}>
-              {listing.image_url ? (
-                <img src={listing.image_url} alt="" className="card-image" />
-              ) : (
-                <span className="listing-image">{listing.category}</span>
-              )}
-              <div>
-                <h3>{listing.title}</h3>
-                <p>{listing.description}</p>
-              </div>
-              <div className="card-footer">
-                <strong>{listing.price}</strong>
-                <Link to={`/listing/${listing.id}`}>Visit listing</Link>
-              </div>
-            </article>
-          ))}
-        </div>
+        <article className="state-card">
+          <h3>No seeded listings</h3>
+          <p>
+            Krafzee now shows live Supabase booths instead of template products.
+            Head to Browse to see what sellers have opened.
+          </p>
+          <div className="hero-actions">
+            <Link className="button button-primary" to="/browse">
+              Browse live booths
+            </Link>
+          </div>
+        </article>
       </section>
     </div>
   )
