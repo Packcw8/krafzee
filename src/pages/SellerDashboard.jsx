@@ -12,6 +12,7 @@ function splitLocation(location = '') {
 
 function SellerDashboard() {
   const { profile, user } = useAuth()
+  const [activeTab, setActiveTab] = useState('booth')
   const [booth, setBooth] = useState(null)
   const [boothDescription, setBoothDescription] = useState('')
   const [boothName, setBoothName] = useState('')
@@ -302,23 +303,38 @@ function SellerDashboard() {
         </p>
       </section>
 
-      <section className="dashboard-grid">
-        <article className="dashboard-card">
-          <h2>Booth details</h2>
-          <p>{booth.name}</p>
-        </article>
-        <article className="dashboard-card">
-          <h2>Market aisle</h2>
-          <p>Handmade & Artisan Market</p>
-        </article>
-        <article className="dashboard-card">
-          <h2>Public booth</h2>
-          <p>
-            <Link to={`/booth/${booth.id}`}>View your booth</Link>
-          </p>
-        </article>
+      <section className="seller-tabs" aria-label="Seller dashboard sections">
+        <button
+          className={activeTab === 'booth' ? 'seller-tab seller-tab-active' : 'seller-tab'}
+          onClick={() => setActiveTab('booth')}
+          type="button"
+        >
+          Booth Details
+        </button>
+        <button
+          className={activeTab === 'list' ? 'seller-tab seller-tab-active' : 'seller-tab'}
+          onClick={() => setActiveTab('list')}
+          type="button"
+        >
+          List an Item
+        </button>
+        <button
+          className={activeTab === 'items' ? 'seller-tab seller-tab-active' : 'seller-tab'}
+          onClick={() => setActiveTab('items')}
+          type="button"
+        >
+          Listed Items
+        </button>
+        <button
+          className={activeTab === 'view' ? 'seller-tab seller-tab-active' : 'seller-tab'}
+          onClick={() => setActiveTab('view')}
+          type="button"
+        >
+          View Booth
+        </button>
       </section>
 
+      {activeTab === 'booth' && (
       <section className="onboarding-card seller-manage-card">
         <p className="eyebrow">Manage booth</p>
         <h2>Update your booth card</h2>
@@ -413,7 +429,9 @@ function SellerDashboard() {
           </button>
         </form>
       </section>
+      )}
 
+      {activeTab === 'list' && (
       <section className="onboarding-card seller-manage-card">
         <p className="eyebrow">List items</p>
         <h2>Add an item to your booth table</h2>
@@ -486,7 +504,9 @@ function SellerDashboard() {
           </button>
         </form>
       </section>
+      )}
 
+      {activeTab === 'items' && (
       <section className="section">
         <div className="section-heading">
           <p className="eyebrow">Your table</p>
@@ -527,6 +547,47 @@ function SellerDashboard() {
           </div>
         )}
       </section>
+      )}
+
+      {activeTab === 'view' && (
+        <section className="onboarding-card seller-manage-card view-booth-panel">
+          <p className="eyebrow">Public booth</p>
+          <h2>See what shoppers see</h2>
+          <div className="view-booth-card">
+            {thumbnailUrl ? (
+              <img src={thumbnailUrl} alt="" className="booth-thumbnail" />
+            ) : (
+              <span className="booth-avatar">{booth.name.charAt(0)}</span>
+            )}
+            <div>
+              <h3>{booth.name}</h3>
+              <p>{booth.description}</p>
+              <dl className="listing-meta">
+                <div>
+                  <dt>Location</dt>
+                  <dd>{booth.location || 'Location notes coming soon'}</dd>
+                </div>
+                <div>
+                  <dt>Listed items</dt>
+                  <dd>{listings.length}</dd>
+                </div>
+              </dl>
+              <div className="hero-actions">
+                <Link className="button button-primary" to={`/booth/${booth.id}`}>
+                  Open public booth
+                </Link>
+                <button
+                  className="button button-secondary"
+                  onClick={() => setActiveTab('booth')}
+                  type="button"
+                >
+                  Edit booth details
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

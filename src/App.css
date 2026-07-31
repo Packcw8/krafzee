@@ -496,6 +496,36 @@
   color: var(--muted);
 }
 
+.seller-tabs {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 24, 39, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(16, 24, 39, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+}
+
+.seller-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: 1 1 150px;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 12px 14px;
+}
+
+.seller-tab:hover,
+.seller-tab-active {
+  background: rgba(31, 79, 138, 0.1);
+  border-color: rgba(31, 79, 138, 0.18);
+  color: var(--ink);
+}
+
 .booth-onboarding-card {
   max-width: 920px;
   margin: 0 auto;
@@ -602,6 +632,22 @@
   overflow: hidden;
   text-align: center;
   width: 160px;
+}
+
+.view-booth-panel {
+  max-width: none;
+}
+
+.view-booth-card {
+  align-items: center;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: auto 1fr;
+  margin-top: 18px;
+}
+
+.view-booth-card p {
+  color: var(--muted);
 }
 
 .market-choice-fieldset {
@@ -1054,6 +1100,7 @@ dd {
   .form-grid,
   .thumbnail-manager,
   .seller-listing-card,
+  .view-booth-card,
   .policy-link-grid,
   .booth-panel {
     grid-template-columns: 1fr;
