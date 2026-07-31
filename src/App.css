@@ -412,6 +412,47 @@
   font-weight: 700;
 }
 
+.auth-form input[type="file"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 243, 251, 0.92));
+  border: 1px dashed rgba(36, 74, 115, 0.28);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px;
+}
+
+.auth-form input[type="file"]::file-selector-button {
+  background: var(--green);
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(31, 79, 138, 0.16);
+  color: #fffaf2;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  margin-right: 14px;
+  padding: 10px 14px;
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.auth-form input[type="file"]:hover {
+  border-color: rgba(36, 74, 115, 0.44);
+}
+
+.auth-form input[type="file"]:hover::file-selector-button {
+  background: #1f4f8a;
+  box-shadow: 0 10px 22px rgba(31, 79, 138, 0.22);
+  transform: translateY(-1px);
+}
+
+.auth-form input[type="file"]:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .auth-form button:disabled {
   cursor: wait;
   opacity: 0.72;
