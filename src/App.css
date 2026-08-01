@@ -105,6 +105,10 @@
   gap: 44px;
 }
 
+.seller-dashboard-stack {
+  padding-bottom: 104px;
+}
+
 .hero-section {
   align-items: center;
   background:
@@ -631,11 +635,14 @@
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 10px auto 0;
+  left: 50%;
+  margin: 0;
   max-width: 760px;
   padding: 8px;
-  position: sticky;
-  z-index: 8;
+  position: fixed;
+  transform: translateX(-50%);
+  width: min(calc(100% - 32px), 760px);
+  z-index: 30;
 }
 
 .seller-bottom-tab {
@@ -1110,6 +1117,10 @@ dd {
 }
 
 @media (max-width: 560px) {
+  .seller-dashboard-stack {
+    padding-bottom: 94px;
+  }
+
   .seller-bottom-tabs {
     border-radius: 18px;
     bottom: 10px;

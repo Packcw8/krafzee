@@ -301,7 +301,7 @@ function SellerDashboard() {
   }
 
   return (
-    <div className="page-stack">
+    <div className="page-stack seller-dashboard-stack">
       <section className="page-intro">
         <p className="eyebrow">Seller dashboard</p>
         <h1>Your booth table is ready.</h1>
