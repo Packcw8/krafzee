@@ -58,6 +58,17 @@ export const listingSelectFields = [
   'quantity',
   'processing_time',
   'materials',
+  'requires_shipping',
+  'free_shipping',
+  'weight',
+  'weight_unit',
+  'package_length',
+  'package_width',
+  'package_height',
+  'dimension_unit',
+  'shipping_profile_id',
+  'handling_time_min_days',
+  'handling_time_max_days',
 ].join(', ')
 
 export const categoryDetails = {

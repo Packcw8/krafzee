@@ -6,12 +6,14 @@ import {
   CreditCard,
   Eye,
   LayoutDashboard,
+  Package,
   PackagePlus,
   Pencil,
   RefreshCw,
   Save,
   Store,
   Trash2,
+  Truck,
   X,
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -36,6 +38,7 @@ const sellerTabs = [
   { key: 'booth', label: 'Booth Details', Icon: Store },
   { key: 'list', label: 'List an Item', Icon: PackagePlus },
   { key: 'items', label: 'Listed Items', Icon: LayoutDashboard },
+  { key: 'shipping', label: 'Shipping', Icon: Truck },
   { key: 'view', label: 'View Booth', Icon: Eye },
 ]
 
@@ -121,11 +124,35 @@ function SellerDashboard() {
   const [listingPrice, setListingPrice] = useState('')
   const [listingProcessingTime, setListingProcessingTime] = useState('')
   const [listingQuantity, setListingQuantity] = useState('1')
+  const [listingRequiresShipping, setListingRequiresShipping] = useState(true)
+  const [listingFreeShipping, setListingFreeShipping] = useState(false)
+  const [listingWeight, setListingWeight] = useState('')
+  const [listingPackageLength, setListingPackageLength] = useState('')
+  const [listingPackageWidth, setListingPackageWidth] = useState('')
+  const [listingPackageHeight, setListingPackageHeight] = useState('')
   const [listingStep, setListingStep] = useState(0)
   const [listings, setListings] = useState([])
   const [listingTitle, setListingTitle] = useState('')
   const [listingVariants, setListingVariants] = useState('')
+  const [newPackage, setNewPackage] = useState({
+    empty_weight: '0',
+    height: '',
+    length: '',
+    name: '',
+    width: '',
+  })
   const [sellerBio, setSellerBio] = useState('')
+  const [sellerPackages, setSellerPackages] = useState([])
+  const [shippingSettings, setShippingSettings] = useState({
+    ship_from_city: '',
+    ship_from_country: 'US',
+    ship_from_name: '',
+    ship_from_phone: '',
+    ship_from_state: '',
+    ship_from_street1: '',
+    ship_from_street2: '',
+    ship_from_zip: '',
+  })
   const [stateName, setStateName] = useState('')
   const [stripeError, setStripeError] = useState('')
   const [stripeMessage, setStripeMessage] = useState('')
@@ -173,6 +200,16 @@ function SellerDashboard() {
           .select(listingSelectFields)
           .eq('booth_id', data.id)
           .order('title', { ascending: true })
+        const { data: shippingData } = await supabase
+          .from('seller_shipping_settings')
+          .select('*')
+          .eq('booth_id', data.id)
+          .maybeSingle()
+        const { data: packageData } = await supabase
+          .from('seller_packages')
+          .select('*')
+          .eq('booth_id', data.id)
+          .order('is_default', { ascending: false })
 
         if (listingError) {
           setError(getFriendlyError('load your listed items'))
@@ -186,10 +223,22 @@ function SellerDashboard() {
         setCity(locationParts.city)
         setStateName(locationParts.state)
         setThumbnailUrl(data.thumbnail_url ?? '')
+        setShippingSettings({
+          ship_from_city: shippingData?.ship_from_city ?? locationParts.city,
+          ship_from_country: shippingData?.ship_from_country ?? 'US',
+          ship_from_name: shippingData?.ship_from_name ?? data.name ?? '',
+          ship_from_phone: shippingData?.ship_from_phone ?? '',
+          ship_from_state: shippingData?.ship_from_state ?? locationParts.state,
+          ship_from_street1: shippingData?.ship_from_street1 ?? '',
+          ship_from_street2: shippingData?.ship_from_street2 ?? '',
+          ship_from_zip: shippingData?.ship_from_zip ?? '',
+        })
+        setSellerPackages(packageData ?? [])
         resetListingForMarket(data.market_type)
       } else {
         setBooth(null)
         setListings([])
+        setSellerPackages([])
       }
 
       setIsLoading(false)
@@ -339,6 +388,12 @@ function SellerDashboard() {
       materials: (listing.materials ?? []).join(', '),
       variants: variantsToText(listing.variants ?? []),
       attributes: listing.attributes ?? {},
+      requires_shipping: listing.requires_shipping !== false,
+      free_shipping: Boolean(listing.free_shipping),
+      weight: listing.weight ?? '',
+      package_length: listing.package_length ?? '',
+      package_width: listing.package_width ?? '',
+      package_height: listing.package_height ?? '',
     })
   }
 
@@ -399,6 +454,12 @@ function SellerDashboard() {
       return
     }
 
+    if (editingListingValues.requires_shipping !== false && !Number(editingListingValues.weight)) {
+      setError('Add a shipping weight before saving this item.')
+      setIsListingUpdating(false)
+      return
+    }
+
     const category = editingListingValues.category
     const categoryDetailsForEdit = getCategoryDetails(category)
     const updates = {
@@ -412,6 +473,14 @@ function SellerDashboard() {
       quantity: quantityValue,
       processing_time: editingListingValues.processing_time?.trim() || null,
       materials: parseList(editingListingValues.materials ?? ''),
+      requires_shipping: editingListingValues.requires_shipping !== false,
+      free_shipping: Boolean(editingListingValues.free_shipping),
+      weight: editingListingValues.requires_shipping === false ? null : Number(editingListingValues.weight),
+      weight_unit: 'oz',
+      package_length: editingListingValues.package_length ? Number(editingListingValues.package_length) : null,
+      package_width: editingListingValues.package_width ? Number(editingListingValues.package_width) : null,
+      package_height: editingListingValues.package_height ? Number(editingListingValues.package_height) : null,
+      dimension_unit: 'in',
     }
 
     const { data, error: updateError } = await supabase
@@ -592,6 +661,12 @@ function SellerDashboard() {
       return
     }
 
+    if (listingRequiresShipping && !Number(listingWeight)) {
+      setError('Add a shipping weight before publishing.')
+      setIsListingSaving(false)
+      return
+    }
+
     const selectedCategoryDetails = getCategoryDetails(listingCategory)
     const listingPayload = {
       booth_id: booth.id,
@@ -607,6 +682,14 @@ function SellerDashboard() {
       quantity: quantityValue,
       processing_time: listingProcessingTime.trim() || null,
       materials: parseList(listingMaterials),
+      requires_shipping: listingRequiresShipping,
+      free_shipping: listingRequiresShipping ? listingFreeShipping : false,
+      weight: listingRequiresShipping ? Number(listingWeight) : null,
+      weight_unit: 'oz',
+      package_length: listingPackageLength ? Number(listingPackageLength) : null,
+      package_width: listingPackageWidth ? Number(listingPackageWidth) : null,
+      package_height: listingPackageHeight ? Number(listingPackageHeight) : null,
+      dimension_unit: 'in',
     }
 
     const { data, error: listingError } = await supabase
@@ -632,6 +715,12 @@ function SellerDashboard() {
     setListingMaterials('')
     setListingProcessingTime('')
     setListingQuantity('1')
+    setListingRequiresShipping(true)
+    setListingFreeShipping(false)
+    setListingWeight('')
+    setListingPackageLength('')
+    setListingPackageWidth('')
+    setListingPackageHeight('')
     setListingStep(0)
     setListingVariants('')
     listingFormRef.current?.reset()
@@ -672,11 +761,158 @@ function SellerDashboard() {
     }))
   }
 
+  function updateShippingSetting(key, value) {
+    setShippingSettings((currentSettings) => ({
+      ...currentSettings,
+      [key]: value,
+    }))
+  }
+
+  function updateNewPackageValue(key, value) {
+    setNewPackage((currentPackage) => ({
+      ...currentPackage,
+      [key]: value,
+    }))
+  }
+
+  async function saveShippingSettings(event) {
+    event.preventDefault()
+    setError('')
+    setSuccessMessage('')
+
+    const payload = {
+      booth_id: booth.id,
+      ...shippingSettings,
+      ship_from_country: shippingSettings.ship_from_country || 'US',
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data, error: shippingError } = await supabase
+      .from('seller_shipping_settings')
+      .upsert(payload, { onConflict: 'booth_id' })
+      .select('*')
+      .single()
+
+    if (shippingError) {
+      setError(getFriendlyError('save shipping settings'))
+      return
+    }
+
+    setShippingSettings({
+      ship_from_city: data.ship_from_city ?? '',
+      ship_from_country: data.ship_from_country ?? 'US',
+      ship_from_name: data.ship_from_name ?? '',
+      ship_from_phone: data.ship_from_phone ?? '',
+      ship_from_state: data.ship_from_state ?? '',
+      ship_from_street1: data.ship_from_street1 ?? '',
+      ship_from_street2: data.ship_from_street2 ?? '',
+      ship_from_zip: data.ship_from_zip ?? '',
+    })
+    setSuccessMessage('Shipping settings saved.')
+  }
+
+  async function addSellerPackage(event) {
+    event.preventDefault()
+    setError('')
+    setSuccessMessage('')
+
+    if (!newPackage.name.trim() || !Number(newPackage.length) || !Number(newPackage.width) || !Number(newPackage.height)) {
+      setError('Add a package name and dimensions.')
+      return
+    }
+
+    const { data, error: packageError } = await supabase
+      .from('seller_packages')
+      .insert({
+        booth_id: booth.id,
+        name: newPackage.name.trim(),
+        length: Number(newPackage.length),
+        width: Number(newPackage.width),
+        height: Number(newPackage.height),
+        empty_weight: Number(newPackage.empty_weight) || 0,
+        dimension_unit: 'in',
+        weight_unit: 'oz',
+        is_default: sellerPackages.length === 0,
+      })
+      .select('*')
+      .single()
+
+    if (packageError) {
+      setError(getFriendlyError('save this package'))
+      return
+    }
+
+    setSellerPackages((currentPackages) => [data, ...currentPackages])
+    setNewPackage({ empty_weight: '0', height: '', length: '', name: '', width: '' })
+    setSuccessMessage('Package saved.')
+  }
+
+  async function setDefaultPackage(packageId) {
+    setError('')
+    setSuccessMessage('')
+
+    await supabase
+      .from('seller_packages')
+      .update({ is_default: false })
+      .eq('booth_id', booth.id)
+
+    const { data, error: packageError } = await supabase
+      .from('seller_packages')
+      .update({ is_default: true })
+      .eq('id', packageId)
+      .eq('booth_id', booth.id)
+      .select('*')
+      .single()
+
+    if (packageError) {
+      setError(getFriendlyError('set the default package'))
+      return
+    }
+
+    await supabase
+      .from('seller_shipping_settings')
+      .upsert({ booth_id: booth.id, default_package_id: packageId }, { onConflict: 'booth_id' })
+
+    setSellerPackages((currentPackages) =>
+      currentPackages.map((sellerPackage) => ({
+        ...sellerPackage,
+        is_default: sellerPackage.id === data.id,
+      })),
+    )
+    setSuccessMessage('Default package updated.')
+  }
+
+  async function deleteSellerPackage(packageId) {
+    setError('')
+    setSuccessMessage('')
+
+    const { error: packageError } = await supabase
+      .from('seller_packages')
+      .delete()
+      .eq('id', packageId)
+      .eq('booth_id', booth.id)
+
+    if (packageError) {
+      setError(getFriendlyError('delete this package'))
+      return
+    }
+
+    setSellerPackages((currentPackages) =>
+      currentPackages.filter((sellerPackage) => sellerPackage.id !== packageId),
+    )
+    setSuccessMessage('Package deleted.')
+  }
+
   function goToNextListingStep() {
     setError('')
 
     if (listingStep === 0 && !listingTitle.trim()) {
       setError('Add an item title before continuing.')
+      return
+    }
+
+    if (listingStep === 2 && listingRequiresShipping && !Number(listingWeight)) {
+      setError('Add a shipping weight before continuing.')
       return
     }
 
@@ -700,6 +936,11 @@ function SellerDashboard() {
   ]
   const stripeRequirements = booth?.stripe_requirements?.currently_due ?? []
   const stripeConnectReady = Boolean(booth?.stripe_charges_enabled)
+  const estimatedShippingCost = listingWeight ? Math.max(4.5, 3.95 + Number(listingWeight) * 0.18) : 0
+  const suggestedFreeShippingPrice =
+    listingPrice && estimatedShippingCost
+      ? (Number(listingPrice) + estimatedShippingCost).toFixed(2)
+      : ''
 
   if (isLoading) {
     return (
@@ -1092,6 +1333,107 @@ function SellerDashboard() {
                 />
               </label>
               <small>Separate sizes, colors, scents, or options with commas.</small>
+              <section className="shipping-editor-panel">
+                <h3>Shipping</h3>
+                <label className="checkbox-row">
+                  <input
+                    checked={listingRequiresShipping}
+                    onChange={(event) => {
+                      setListingRequiresShipping(event.target.checked)
+                      if (!event.target.checked) {
+                        setListingFreeShipping(false)
+                      }
+                    }}
+                    type="checkbox"
+                  />
+                  This item ships to the buyer
+                </label>
+                {listingRequiresShipping && (
+                  <>
+                    <fieldset className="shipping-method-options">
+                      <legend>Shipping Method</legend>
+                      <label>
+                        <input
+                          checked={!listingFreeShipping}
+                          onChange={() => setListingFreeShipping(false)}
+                          type="radio"
+                        />
+                        Buyer pays calculated shipping
+                      </label>
+                      <label>
+                        <input
+                          checked={listingFreeShipping}
+                          onChange={() => setListingFreeShipping(true)}
+                          type="radio"
+                        />
+                        Free shipping
+                      </label>
+                    </fieldset>
+                    {listingFreeShipping && (
+                      <article className="helper-panel">
+                        <p>
+                          Free shipping can make listings more attractive to buyers. Shipping costs will be deducted from your proceeds, so consider including estimated shipping costs in your item price.
+                        </p>
+                        {suggestedFreeShippingPrice && (
+                          <div className="suggested-price-row">
+                            <span>Suggested price with shipping included</span>
+                            <strong>{`$${suggestedFreeShippingPrice}`}</strong>
+                            <button
+                              className="button button-secondary"
+                              onClick={() => setListingPrice(suggestedFreeShippingPrice)}
+                              type="button"
+                            >
+                              Use Suggested Price
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    )}
+                    <div className="form-grid form-grid-two">
+                      <label>
+                        Weight
+                        <input
+                          min="0"
+                          onChange={(event) => setListingWeight(event.target.value)}
+                          placeholder="8"
+                          step="0.1"
+                          type="number"
+                          value={listingWeight}
+                        />
+                      </label>
+                      <label>
+                        Package size
+                        <span className="inline-input-row">
+                          <input
+                            min="0"
+                            onChange={(event) => setListingPackageLength(event.target.value)}
+                            placeholder="L"
+                            step="0.1"
+                            type="number"
+                            value={listingPackageLength}
+                          />
+                          <input
+                            min="0"
+                            onChange={(event) => setListingPackageWidth(event.target.value)}
+                            placeholder="W"
+                            step="0.1"
+                            type="number"
+                            value={listingPackageWidth}
+                          />
+                          <input
+                            min="0"
+                            onChange={(event) => setListingPackageHeight(event.target.value)}
+                            placeholder="H"
+                            step="0.1"
+                            type="number"
+                            value={listingPackageHeight}
+                          />
+                        </span>
+                      </label>
+                    </div>
+                  </>
+                )}
+              </section>
               <label>
                 Item description
                 <textarea
@@ -1356,6 +1698,83 @@ function SellerDashboard() {
                             value={editingListingValues.processing_time ?? ''}
                           />
                         </label>
+                        <section className="shipping-editor-panel">
+                          <h3>Shipping</h3>
+                          <label className="checkbox-row">
+                            <input
+                              checked={editingListingValues.requires_shipping !== false}
+                              onChange={(event) =>
+                                updateEditingListingValue('requires_shipping', event.target.checked)
+                              }
+                              type="checkbox"
+                            />
+                            This item ships to the buyer
+                          </label>
+                          {editingListingValues.requires_shipping !== false && (
+                            <>
+                              <fieldset className="shipping-method-options">
+                                <legend>Shipping Method</legend>
+                                <label>
+                                  <input
+                                    checked={!editingListingValues.free_shipping}
+                                    onChange={() => updateEditingListingValue('free_shipping', false)}
+                                    type="radio"
+                                  />
+                                  Buyer pays calculated shipping
+                                </label>
+                                <label>
+                                  <input
+                                    checked={Boolean(editingListingValues.free_shipping)}
+                                    onChange={() => updateEditingListingValue('free_shipping', true)}
+                                    type="radio"
+                                  />
+                                  Free shipping
+                                </label>
+                              </fieldset>
+                              <div className="form-grid form-grid-two">
+                                <label>
+                                  Weight
+                                  <input
+                                    min="0"
+                                    onChange={(event) => updateEditingListingValue('weight', event.target.value)}
+                                    step="0.1"
+                                    type="number"
+                                    value={editingListingValues.weight ?? ''}
+                                  />
+                                </label>
+                                <label>
+                                  Package size
+                                  <span className="inline-input-row">
+                                    <input
+                                      min="0"
+                                      onChange={(event) => updateEditingListingValue('package_length', event.target.value)}
+                                      placeholder="L"
+                                      step="0.1"
+                                      type="number"
+                                      value={editingListingValues.package_length ?? ''}
+                                    />
+                                    <input
+                                      min="0"
+                                      onChange={(event) => updateEditingListingValue('package_width', event.target.value)}
+                                      placeholder="W"
+                                      step="0.1"
+                                      type="number"
+                                      value={editingListingValues.package_width ?? ''}
+                                    />
+                                    <input
+                                      min="0"
+                                      onChange={(event) => updateEditingListingValue('package_height', event.target.value)}
+                                      placeholder="H"
+                                      step="0.1"
+                                      type="number"
+                                      value={editingListingValues.package_height ?? ''}
+                                    />
+                                  </span>
+                                </label>
+                              </div>
+                            </>
+                          )}
+                        </section>
                         <div className="seller-listing-actions">
                           <button
                             className="button button-primary"
@@ -1416,6 +1835,16 @@ function SellerDashboard() {
                             <dt>Quantity</dt>
                             <dd>{listing.quantity ?? 1}</dd>
                           </div>
+                          <div>
+                            <dt>Shipping</dt>
+                            <dd>
+                              {listing.requires_shipping === false
+                                ? 'No shipping'
+                                : listing.free_shipping
+                                  ? 'Free shipping'
+                                  : 'Buyer paid'}
+                            </dd>
+                          </div>
                         </dl>
                         {formatListingAttributes(listing.attributes).length > 0 && (
                           <div className="attribute-chip-list">
@@ -1435,6 +1864,193 @@ function SellerDashboard() {
             })}
           </div>
         )}
+      </section>
+      )}
+
+      {activeTab === 'shipping' && (
+      <section className="section">
+        <div className="section-heading">
+          <p className="eyebrow">Shipping</p>
+          <h2>Ship-from address and packages</h2>
+        </div>
+        <div className="shipping-dashboard-grid">
+          <form className="onboarding-card seller-manage-card auth-form" onSubmit={saveShippingSettings}>
+            <h3>Ship From Address</h3>
+            <div className="form-grid form-grid-two">
+              <label>
+                Name or business
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_name', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_name}
+                />
+              </label>
+              <label>
+                Phone
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_phone', event.target.value)}
+                  type="text"
+                  value={shippingSettings.ship_from_phone}
+                />
+              </label>
+              <label>
+                Street
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_street1', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_street1}
+                />
+              </label>
+              <label>
+                Apt or suite
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_street2', event.target.value)}
+                  type="text"
+                  value={shippingSettings.ship_from_street2}
+                />
+              </label>
+              <label>
+                City
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_city', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_city}
+                />
+              </label>
+              <label>
+                State
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_state', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_state}
+                />
+              </label>
+              <label>
+                ZIP
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_zip', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_zip}
+                />
+              </label>
+              <label>
+                Country
+                <input
+                  onChange={(event) => updateShippingSetting('ship_from_country', event.target.value)}
+                  required
+                  type="text"
+                  value={shippingSettings.ship_from_country}
+                />
+              </label>
+            </div>
+            {error && <p className="form-error">{error}</p>}
+            {successMessage && <p className="form-success">{successMessage}</p>}
+            <button className="button button-primary" type="submit">
+              Save shipping
+            </button>
+          </form>
+          <section className="onboarding-card seller-manage-card">
+            <h3>Saved Packages</h3>
+            <form className="seller-listing-edit-form" onSubmit={addSellerPackage}>
+              <div className="form-grid form-grid-two">
+                <label>
+                  Package name
+                  <input
+                    onChange={(event) => updateNewPackageValue('name', event.target.value)}
+                    placeholder="Small Jewelry Box"
+                    type="text"
+                    value={newPackage.name}
+                  />
+                </label>
+                <label>
+                  Empty weight
+                  <input
+                    min="0"
+                    onChange={(event) => updateNewPackageValue('empty_weight', event.target.value)}
+                    step="0.1"
+                    type="number"
+                    value={newPackage.empty_weight}
+                  />
+                </label>
+                <label>
+                  Dimensions
+                  <span className="inline-input-row">
+                    <input
+                      min="0"
+                      onChange={(event) => updateNewPackageValue('length', event.target.value)}
+                      placeholder="L"
+                      step="0.1"
+                      type="number"
+                      value={newPackage.length}
+                    />
+                    <input
+                      min="0"
+                      onChange={(event) => updateNewPackageValue('width', event.target.value)}
+                      placeholder="W"
+                      step="0.1"
+                      type="number"
+                      value={newPackage.width}
+                    />
+                    <input
+                      min="0"
+                      onChange={(event) => updateNewPackageValue('height', event.target.value)}
+                      placeholder="H"
+                      step="0.1"
+                      type="number"
+                      value={newPackage.height}
+                    />
+                  </span>
+                </label>
+              </div>
+              <button className="button button-primary" type="submit">
+                <Package aria-hidden="true" size={17} />
+                Save package
+              </button>
+            </form>
+            <div className="seller-package-list">
+              {sellerPackages.map((sellerPackage) => (
+                <article className="seller-package-card" key={sellerPackage.id}>
+                  <div>
+                    <strong>{sellerPackage.name}</strong>
+                    <p>
+                      {sellerPackage.length} x {sellerPackage.width} x {sellerPackage.height} in,{' '}
+                      {sellerPackage.empty_weight} oz
+                    </p>
+                    {sellerPackage.is_default && <span className="attribute-chip">Default</span>}
+                  </div>
+                  <div className="seller-listing-actions">
+                    {!sellerPackage.is_default && (
+                      <button
+                        className="button button-secondary"
+                        onClick={() => setDefaultPackage(sellerPackage.id)}
+                        type="button"
+                      >
+                        Set default
+                      </button>
+                    )}
+                    <button
+                      className="button button-secondary seller-danger-button"
+                      onClick={() => deleteSellerPackage(sellerPackage.id)}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {sellerPackages.length === 0 && (
+                <article className="state-card">
+                  <h3>No packages saved yet</h3>
+                </article>
+              )}
+            </div>
+          </section>
+        </div>
       </section>
       )}
 

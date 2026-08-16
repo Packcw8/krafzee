@@ -281,8 +281,10 @@ function Browse() {
                                 booth_id: listing.booth_id,
                                 boothName: booth?.name || 'Maker booth',
                                 category: listing.category,
+                                free_shipping: listing.free_shipping,
                                 image_url: listing.image_url,
                                 price: listing.price,
+                                requires_shipping: listing.requires_shipping,
                                 selectedOption: listing.variants?.[0]?.name ?? '',
                                 title: listing.title,
                               })

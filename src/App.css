@@ -1235,6 +1235,76 @@
   gap: 8px;
 }
 
+.shipping-editor-panel,
+.helper-panel {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.checkbox-row,
+.shipping-method-options label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.shipping-method-options {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+}
+
+.shipping-method-options legend {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 6px;
+}
+
+.inline-input-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.suggested-price-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.shipping-dashboard-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+}
+
+.seller-package-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.seller-package-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px;
+}
+
 .listing-review-card,
 .listing-details-panel {
   background: rgba(255, 255, 255, 0.78);
@@ -1377,6 +1447,56 @@
   gap: 12px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.cart-shipping-panel,
+.cart-shipping-group {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.cart-address-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.cart-address-grid input {
+  background: #fff;
+  border: 1px solid rgba(16, 24, 39, 0.14);
+  border-radius: 10px;
+  color: var(--ink);
+  padding: 10px 11px;
+}
+
+.cart-address-grid input:nth-child(2),
+.cart-address-grid input:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.shipping-rate-option {
+  align-items: center;
+  background: rgba(238, 243, 251, 0.7);
+  border: 1px solid rgba(31, 79, 138, 0.12);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto 1fr auto;
+  padding: 10px;
+}
+
+.shipping-rate-option span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.shipping-rate-option b {
+  color: var(--green);
 }
 
 .cart-booth-group {
@@ -1644,7 +1764,7 @@
   box-shadow: 0 18px 42px rgba(16, 24, 39, 0.16);
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   left: 50%;
   margin: 0;
   max-width: 760px;
@@ -2308,6 +2428,7 @@ dd {
   .onboarding-layout,
   .seller-cta-section,
   .seller-pro-panel,
+  .shipping-dashboard-grid,
   .site-footer {
     grid-template-columns: 1fr;
   }

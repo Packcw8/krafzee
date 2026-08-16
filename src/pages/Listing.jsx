@@ -197,8 +197,10 @@ function Listing() {
                 booth_id: listing.booth_id,
                 boothName: listingBooth?.name || 'Maker booth',
                 category: listing.category,
+                free_shipping: listing.free_shipping,
                 image_url: listing.image_url,
                 price: listing.price,
+                requires_shipping: listing.requires_shipping,
                 selectedOption,
                 title: listing.title,
               })
