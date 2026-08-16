@@ -79,6 +79,41 @@ function getFriendlyError(action) {
   return `We could not ${action} right now. Please check the details and try again.`
 }
 
+const shippingSchemaSetupMessage =
+  'Shipping setup is not finished yet. The production database needs the shipping migration applied before ship-from addresses, packages, or shipping fields can be saved.'
+const shippingListingFields = new Set([
+  'requires_shipping',
+  'free_shipping',
+  'weight',
+  'weight_unit',
+  'package_length',
+  'package_width',
+  'package_height',
+  'dimension_unit',
+  'shipping_profile_id',
+  'handling_time_min_days',
+  'handling_time_max_days',
+])
+const legacyListingSelectFields = listingSelectFields
+  .split(', ')
+  .filter((field) => !shippingListingFields.has(field))
+  .join(', ')
+
+function isShippingSchemaError(error) {
+  if (!error) {
+    return false
+  }
+
+  const message = error.message ?? ''
+
+  return (
+    error.code === 'PGRST205' ||
+    (error.code === '42703' && [...shippingListingFields].some((field) => message.includes(field))) ||
+    message.includes('seller_shipping_settings') ||
+    message.includes('seller_packages')
+  )
+}
+
 async function readApiResponse(response) {
   const text = await response.text()
 
@@ -143,6 +178,7 @@ function SellerDashboard() {
   })
   const [sellerBio, setSellerBio] = useState('')
   const [sellerPackages, setSellerPackages] = useState([])
+  const [shippingSchemaReady, setShippingSchemaReady] = useState(true)
   const [shippingSettings, setShippingSettings] = useState({
     ship_from_city: '',
     ship_from_country: 'US',
@@ -179,6 +215,7 @@ function SellerDashboard() {
 
       setIsLoading(true)
       setError('')
+      setShippingSchemaReady(true)
 
       const { data, error: boothError } = await supabase
         .from('booths')
@@ -195,24 +232,45 @@ function SellerDashboard() {
         setBooth(null)
       } else if (data) {
         const locationParts = splitLocation(data.location)
-        const { data: listingData, error: listingError } = await supabase
+        let { data: listingData, error: listingError } = await supabase
           .from('listings')
           .select(listingSelectFields)
           .eq('booth_id', data.id)
           .order('title', { ascending: true })
-        const { data: shippingData } = await supabase
+        let shippingSchemaMissing = false
+
+        if (isShippingSchemaError(listingError)) {
+          shippingSchemaMissing = true
+          const fallbackListingResponse = await supabase
+            .from('listings')
+            .select(legacyListingSelectFields)
+            .eq('booth_id', data.id)
+            .order('title', { ascending: true })
+
+          listingData = fallbackListingResponse.data
+          listingError = fallbackListingResponse.error
+        }
+
+        const { data: shippingData, error: shippingError } = await supabase
           .from('seller_shipping_settings')
           .select('*')
           .eq('booth_id', data.id)
           .maybeSingle()
-        const { data: packageData } = await supabase
+        const { data: packageData, error: packageError } = await supabase
           .from('seller_packages')
           .select('*')
           .eq('booth_id', data.id)
           .order('is_default', { ascending: false })
 
+        if (isShippingSchemaError(shippingError) || isShippingSchemaError(packageError)) {
+          shippingSchemaMissing = true
+        }
+
         if (listingError) {
           setError(getFriendlyError('load your listed items'))
+        } else if (shippingSchemaMissing) {
+          setShippingSchemaReady(false)
+          setError(shippingSchemaSetupMessage)
         }
 
         setBooth(data)
@@ -233,7 +291,7 @@ function SellerDashboard() {
           ship_from_street2: shippingData?.ship_from_street2 ?? '',
           ship_from_zip: shippingData?.ship_from_zip ?? '',
         })
-        setSellerPackages(packageData ?? [])
+        setSellerPackages(shippingSchemaMissing ? [] : packageData ?? [])
         resetListingForMarket(data.market_type)
       } else {
         setBooth(null)
@@ -423,6 +481,12 @@ function SellerDashboard() {
     setError('')
     setSuccessMessage('')
     setIsListingUpdating(true)
+
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      setIsListingUpdating(false)
+      return
+    }
 
     const priceValue =
       editingListingValues.price === '' || editingListingValues.price === null
@@ -614,6 +678,12 @@ function SellerDashboard() {
     setIsPublishConfirmOpen(false)
     setIsListingSaving(true)
 
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      setIsListingSaving(false)
+      return
+    }
+
     let imageUrl = ''
 
     if (listingImageFile) {
@@ -780,6 +850,11 @@ function SellerDashboard() {
     setError('')
     setSuccessMessage('')
 
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      return
+    }
+
     const payload = {
       booth_id: booth.id,
       ...shippingSettings,
@@ -816,6 +891,11 @@ function SellerDashboard() {
     setError('')
     setSuccessMessage('')
 
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      return
+    }
+
     if (!newPackage.name.trim() || !Number(newPackage.length) || !Number(newPackage.width) || !Number(newPackage.height)) {
       setError('Add a package name and dimensions.')
       return
@@ -850,6 +930,11 @@ function SellerDashboard() {
   async function setDefaultPackage(packageId) {
     setError('')
     setSuccessMessage('')
+
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      return
+    }
 
     await supabase
       .from('seller_packages')
@@ -886,6 +971,11 @@ function SellerDashboard() {
     setError('')
     setSuccessMessage('')
 
+    if (!shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      return
+    }
+
     const { error: packageError } = await supabase
       .from('seller_packages')
       .delete()
@@ -905,6 +995,11 @@ function SellerDashboard() {
 
   function goToNextListingStep() {
     setError('')
+
+    if (listingStep === 2 && !shippingSchemaReady) {
+      setError(shippingSchemaSetupMessage)
+      return
+    }
 
     if (listingStep === 0 && !listingTitle.trim()) {
       setError('Add an item title before continuing.')
@@ -1872,6 +1967,7 @@ function SellerDashboard() {
         <div className="section-heading">
           <p className="eyebrow">Shipping</p>
           <h2>Ship-from address and packages</h2>
+          {!shippingSchemaReady && <p className="form-error">{shippingSchemaSetupMessage}</p>}
         </div>
         <div className="shipping-dashboard-grid">
           <form className="onboarding-card seller-manage-card auth-form" onSubmit={saveShippingSettings}>
@@ -1950,7 +2046,7 @@ function SellerDashboard() {
             </div>
             {error && <p className="form-error">{error}</p>}
             {successMessage && <p className="form-success">{successMessage}</p>}
-            <button className="button button-primary" type="submit">
+            <button className="button button-primary" disabled={!shippingSchemaReady} type="submit">
               Save shipping
             </button>
           </form>
@@ -2007,7 +2103,7 @@ function SellerDashboard() {
                   </span>
                 </label>
               </div>
-              <button className="button button-primary" type="submit">
+              <button className="button button-primary" disabled={!shippingSchemaReady} type="submit">
                 <Package aria-hidden="true" size={17} />
                 Save package
               </button>
