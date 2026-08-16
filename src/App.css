@@ -561,8 +561,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-.category-tile,
-.filter-chip {
+.category-tile {
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(16, 24, 39, 0.08);
   border-radius: 14px;
@@ -598,7 +597,7 @@
   justify-content: space-between;
 }
 
-.featured-row-heading h3 {
+.featured-row-heading h2 {
   font-size: clamp(22px, 3vw, 30px);
 }
 
@@ -2051,32 +2050,6 @@ dd {
   margin: 0;
 }
 
-.filter-bar {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.filter-label {
-  align-items: center;
-  color: var(--muted);
-  display: inline-flex;
-  font-size: 13px;
-  font-weight: 900;
-  gap: 6px;
-  text-transform: uppercase;
-}
-
-.filter-chip {
-  cursor: pointer;
-}
-
-.filter-chip-active {
-  background: var(--green);
-  color: #fffaf2;
-}
-
 .market-search-card {
   align-items: center;
   background: rgba(255, 255, 255, 0.9);
@@ -2138,14 +2111,8 @@ dd {
   justify-content: space-between;
 }
 
-.product-type-row-heading h3 {
+.product-type-row-heading h2 {
   font-size: clamp(22px, 3vw, 30px);
-}
-
-.product-type-row-heading span {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 900;
 }
 
 .scrolling-listing-row {

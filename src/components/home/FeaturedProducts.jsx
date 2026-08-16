@@ -15,13 +15,12 @@ function getVisual(category) {
   return categoryVisuals[category] || 'original'
 }
 
-function getListingType(listing) {
-  return listing.item_type || listing.category || 'Market finds'
+function getListingCategory(listing) {
+  return listing.category || listing.item_type || 'Market finds'
 }
 
 function FeaturedProductCard({ booth, listing }) {
   const category = listing.category || 'Original goods'
-  const listingType = getListingType(listing)
 
   return (
     <article className="featured-product-card" key={listing.id}>
@@ -36,7 +35,7 @@ function FeaturedProductCard({ booth, listing }) {
         </button>
       </div>
       <div className="product-card-copy">
-        <p className="eyebrow">{listingType}</p>
+        <p className="eyebrow">{category}</p>
         <h3>{listing.title}</h3>
         <p>
           {booth?.id ? (
@@ -61,17 +60,14 @@ function FeaturedProductCard({ booth, listing }) {
   )
 }
 
-function FeaturedProductTypeRow({ boothById, listings, type }) {
+function FeaturedCategoryRow({ boothById, category, listings }) {
   const market = getMarketSection(listings[0]?.market_type || 'handmade')
   const visibleListings = listings.slice(0, 8)
 
   return (
-    <section className="featured-market-row" aria-label={`${type} featured items`}>
+    <section className="featured-market-row" aria-label={`${category} featured items`}>
       <div className="featured-row-heading">
-        <div>
-          <p className="eyebrow">{market.title}</p>
-          <h3>{type}</h3>
-        </div>
+        <h2>{category}</h2>
         <Link to={`/browse?market=${market.key}`}>View all</Link>
       </div>
 
@@ -91,32 +87,25 @@ function FeaturedProductTypeRow({ boothById, listings, type }) {
 function FeaturedProducts({ booths = [], error = '', isLoading = false, listings = [] }) {
   const boothById = new Map(booths.map((booth) => [booth.id, booth]))
   const hasListings = listings.length > 0
-  const productTypeRows = Array.from(
+  const categoryRows = Array.from(
     listings.reduce((groups, listing) => {
-      const type = getListingType(listing)
-      const typeListings = groups.get(type) ?? []
-      typeListings.push(listing)
-      groups.set(type, typeListings)
+      const category = getListingCategory(listing)
+      const categoryListings = groups.get(category) ?? []
+      categoryListings.push(listing)
+      groups.set(category, categoryListings)
       return groups
     }, new Map()),
-    ([type, typeListings]) => ({
-      listings: typeListings,
-      type,
+    ([category, categoryListings]) => ({
+      category,
+      listings: categoryListings,
     }),
   )
 
   return (
     <section className="section" id="shop">
-      <div className="section-heading">
-        <p className="eyebrow">Browse by product type</p>
-        <h2>Fresh rows from open booths</h2>
-        <p>Live goods appear here only after sellers create items for that product type.</p>
-      </div>
-
       {isLoading && (
         <article className="state-card homepage-state-card">
-          <h3>Setting out the newest finds</h3>
-          <p>Loading live listings from the market.</p>
+          <h3>Loading market items</h3>
         </article>
       )}
 
@@ -130,19 +119,18 @@ function FeaturedProducts({ booths = [], error = '', isLoading = false, listings
       {!isLoading && !error && !hasListings && (
         <article className="state-card homepage-state-card">
           <h3>No listed goods yet</h3>
-          <p>As sellers add items, the newest market finds will appear here.</p>
           <Link to="/browse?market=handmade">Walk the market</Link>
         </article>
       )}
 
       {!isLoading && !error && hasListings && (
         <div className="featured-market-sections">
-          {productTypeRows.map(({ listings: typeListings, type }) => (
-            <FeaturedProductTypeRow
+          {categoryRows.map(({ category, listings: categoryListings }) => (
+            <FeaturedCategoryRow
               boothById={boothById}
-              key={type}
-              listings={typeListings}
-              type={type}
+              category={category}
+              key={category}
+              listings={categoryListings}
             />
           ))}
         </div>

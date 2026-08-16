@@ -28,8 +28,8 @@ function includesSearch(fields, searchTerm) {
     .some((field) => String(field).toLowerCase().includes(searchTerm))
 }
 
-function getListingType(listing) {
-  return listing.item_type || listing.category || 'Market finds'
+function getListingCategory(listing) {
+  return listing.category || listing.item_type || 'Market finds'
 }
 
 function Browse() {
@@ -112,17 +112,17 @@ function Browse() {
     return matchesMarket && matchesSearch
   })
 
-  const listingsByType = filteredListings.reduce((groups, listing) => {
-    const type = getListingType(listing)
-    const typeListings = groups.get(type) ?? []
-    typeListings.push(listing)
-    groups.set(type, typeListings)
+  const listingsByCategory = filteredListings.reduce((groups, listing) => {
+    const category = getListingCategory(listing)
+    const categoryListings = groups.get(category) ?? []
+    categoryListings.push(listing)
+    groups.set(category, categoryListings)
     return groups
   }, new Map())
 
-  const typeRows = Array.from(listingsByType, ([type, typeListings]) => ({
-    listings: typeListings,
-    type,
+  const categoryRows = Array.from(listingsByCategory, ([category, categoryListings]) => ({
+    category,
+    listings: categoryListings,
   }))
 
   const filteredBooths = booths.filter((booth) => {
@@ -190,7 +190,7 @@ function Browse() {
           Search the market
           <input
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search item names, product types, booth names, or sellers"
+            placeholder="Search item names, booth names, or sellers"
             type="search"
             value={searchQuery}
           />
@@ -220,36 +220,20 @@ function Browse() {
 
       {!isLoading && !error && (booths.length > 0 || listings.length > 0) && (
         <>
-        <section className="section">
-          <div className="section-heading market-aisle-heading market-aisle-handmade">
-            <p className="eyebrow">New on the tables</p>
-            <h2>Browse by product type</h2>
-            <p>
-              Showing {filteredListings.length} item{filteredListings.length === 1 ? '' : 's'} across{' '}
-              {typeRows.length} product type{typeRows.length === 1 ? '' : 's'}. Scroll sideways in each row.
-            </p>
-          </div>
-
+        <section className="section" aria-label="Market items">
           {filteredListings.length === 0 ? (
             <article className="state-card">
               <h3>No items match that search</h3>
-              <p>Try another item name, product type, booth name, or seller.</p>
             </article>
           ) : (
             <div className="product-type-section-list">
-              {typeRows.map(({ type, listings: typeListings }) => (
-                <section className="product-type-row" aria-label={`${type} items`} key={type}>
+              {categoryRows.map(({ category, listings: categoryListings }) => (
+                <section className="product-type-row" aria-label={`${category} items`} key={category}>
                   <div className="product-type-row-heading">
-                    <div>
-                      <p className="eyebrow">Product type</p>
-                      <h3>{type}</h3>
-                    </div>
-                    <span>
-                      {typeListings.length} item{typeListings.length === 1 ? '' : 's'}
-                    </span>
+                    <h2>{category}</h2>
                   </div>
-                  <div className="scrolling-listing-row" aria-label={`${type} market items`}>
-                    {typeListings.map((listing) => {
+                  <div className="scrolling-listing-row" aria-label={`${category} market items`}>
+                    {categoryListings.map((listing) => {
                       const booth = boothById.get(listing.booth_id)
                       const attributes = formatListingAttributes(listing.attributes)
 
@@ -258,7 +242,7 @@ function Browse() {
                           {listing.image_url ? (
                             <img src={listing.image_url} alt="" className="card-image" />
                           ) : (
-                            <span className="listing-image">{listing.category || type}</span>
+                            <span className="listing-image">{category}</span>
                           )}
                           <div>
                             <h3>{listing.title}</h3>
@@ -274,10 +258,6 @@ function Browse() {
                                   booth?.name || 'Maker booth'
                                 )}
                               </dd>
-                            </div>
-                            <div>
-                              <dt>Type</dt>
-                              <dd>{type}</dd>
                             </div>
                           </dl>
                           {attributes.length > 0 && (
@@ -326,15 +306,11 @@ function Browse() {
           <div className="section-heading market-aisle-heading market-aisle-handmade">
             <p className="eyebrow">{boothEyebrow}</p>
             <h2>{boothHeading}</h2>
-            <p>
-              {filteredBooths.length} booth{filteredBooths.length === 1 ? '' : 's'} match this view.
-            </p>
           </div>
 
           {filteredBooths.length === 0 ? (
             <article className="state-card">
               <h3>No booths match that search</h3>
-              <p>Clear the search to walk more tables.</p>
             </article>
           ) : (
             <div className="scrolling-booth-row" aria-label={boothAriaLabel}>
