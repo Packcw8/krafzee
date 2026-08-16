@@ -973,6 +973,127 @@
   padding: 20px;
 }
 
+.admin-stat-grid,
+.seller-stats-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-stat-grid article,
+.seller-stats-grid article {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 24, 39, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(16, 24, 39, 0.08);
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.admin-stat-grid span,
+.seller-stats-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-stat-grid strong,
+.seller-stats-grid strong {
+  color: var(--green);
+  font-size: 28px;
+}
+
+.admin-stat-grid small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-table {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(16, 24, 39, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(16, 24, 39, 0.07);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 14px;
+}
+
+.admin-row > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.admin-row span,
+.admin-row small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.admin-badge {
+  background: rgba(31, 79, 138, 0.1);
+  border: 1px solid rgba(31, 79, 138, 0.18);
+  border-radius: 999px;
+  color: var(--green) !important;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.admin-badge-danger {
+  background: rgba(180, 75, 75, 0.12);
+  border-color: rgba(180, 75, 75, 0.26);
+  color: #8f3434 !important;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-actions button,
+.admin-actions a {
+  background: rgba(31, 79, 138, 0.08);
+  border: 1px solid rgba(31, 79, 138, 0.14);
+  border-radius: 8px;
+  color: var(--green);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.admin-actions button:nth-child(3) {
+  color: #8f3434;
+}
+
+.seller-listing-insights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.seller-listing-insights span {
+  background: rgba(31, 79, 138, 0.08);
+  border: 1px solid rgba(31, 79, 138, 0.12);
+  border-radius: 999px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 7px 9px;
+}
+
 .dashboard-card p,
 .auth-card p {
   color: var(--muted);
@@ -2438,6 +2559,8 @@ dd {
   }
 
   .category-grid,
+  .admin-stat-grid,
+  .seller-stats-grid,
   .featured-product-grid,
   .featured-booth-grid,
   .listing-grid,
@@ -2520,6 +2643,8 @@ dd {
   }
 
   .category-grid,
+  .admin-stat-grid,
+  .seller-stats-grid,
   .featured-product-grid,
   .featured-booth-grid,
   .listing-grid,
@@ -2543,6 +2668,7 @@ dd {
   }
 
   .visual-category-card,
+  .admin-row,
   .market-lane-card,
   .seller-readiness-grid,
   .footer-link-grid {

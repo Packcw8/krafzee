@@ -56,7 +56,7 @@ function Browse() {
       ] = await Promise.all([
         supabase
           .from('booths')
-          .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url'),
+          .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url, is_verified, is_hidden, view_count'),
         supabase
           .from('listings')
           .select(listingSelectFields),
@@ -73,8 +73,8 @@ function Browse() {
         setBooths([])
         setListings([])
       } else {
-        setBooths(boothData ?? [])
-        setListings(listingData ?? [])
+        setBooths((boothData ?? []).filter((booth) => !booth.is_hidden))
+        setListings((listingData ?? []).filter((listing) => !listing.is_hidden))
       }
 
       setIsLoading(false)
@@ -109,7 +109,7 @@ function Browse() {
       normalizedSearch,
     )
 
-    return matchesMarket && matchesSearch
+    return Boolean(booth) && matchesMarket && matchesSearch
   })
 
   const listingsByCategory = filteredListings.reduce((groups, listing) => {

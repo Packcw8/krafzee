@@ -43,20 +43,41 @@ function Listing() {
         setListing(null)
         setListingBooth(null)
       } else {
+        if (data?.is_hidden) {
+          setListing(null)
+          setListingBooth(null)
+          setSelectedOption('')
+          setIsLoading(false)
+          return
+        }
+
         setListing(data)
         setSelectedOption(data?.variants?.[0]?.name ?? '')
 
         if (data?.booth_id) {
           const { data: boothData } = await supabase
             .from('booths')
-            .select('id, name, owner_name, location')
+            .select('id, name, owner_name, location, is_hidden')
             .eq('id', data.booth_id)
             .maybeSingle()
 
           if (isMounted) {
+            if (boothData?.is_hidden) {
+              setListing(null)
+              setListingBooth(null)
+              setIsLoading(false)
+              return
+            }
+
             setListingBooth(boothData)
           }
         }
+
+        fetch('/api/analytics/view', {
+          body: JSON.stringify({ listingId, source: 'listing' }),
+          headers: { 'content-type': 'application/json' },
+          method: 'POST',
+        }).catch(() => {})
       }
 
       setIsLoading(false)

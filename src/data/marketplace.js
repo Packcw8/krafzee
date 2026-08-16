@@ -69,6 +69,10 @@ export const listingSelectFields = [
   'shipping_profile_id',
   'handling_time_min_days',
   'handling_time_max_days',
+  'is_verified',
+  'is_hidden',
+  'view_count',
+  'last_viewed_at',
 ].join(', ')
 
 export const categoryDetails = {

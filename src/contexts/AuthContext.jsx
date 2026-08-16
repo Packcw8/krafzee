@@ -117,17 +117,21 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
+  const effectiveRole = session?.user?.email?.toLowerCase() === 'brian@krafzee.com'
+    ? 'admin'
+    : profile?.role ?? (session?.user ? 'buyer' : 'guest')
+
   const value = useMemo(
     () => ({
       isLoading,
       logout,
       profile,
       refreshProfile,
-      role: profile?.role ?? (session?.user ? 'buyer' : 'guest'),
+      role: effectiveRole,
       session,
       user: session?.user ?? null,
     }),
-    [isLoading, profile, refreshProfile, session],
+    [effectiveRole, isLoading, profile, refreshProfile, session],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

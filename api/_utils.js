@@ -80,6 +80,40 @@ export async function getUserFromRequest(req) {
   return { user: data.user, error: null }
 }
 
+export async function requireAdminUser(req, res) {
+  const { user, error } = await getUserFromRequest(req)
+
+  if (error) {
+    sendJson(res, 401, { error })
+    return { supabaseAdmin: null, user: null }
+  }
+
+  const supabaseAdmin = getSupabaseAdmin()
+  const isBrianAdmin = user.email?.toLowerCase() === 'brian@krafzee.com'
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id, role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (isBrianAdmin && profile?.role !== 'admin') {
+    await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        display_name: user.user_metadata?.display_name || user.email.split('@')[0],
+        role: 'admin',
+      }, { onConflict: 'id' })
+  }
+
+  if (!isBrianAdmin && profile?.role !== 'admin') {
+    sendJson(res, 403, { error: 'Admin access is required.' })
+    return { supabaseAdmin: null, user: null }
+  }
+
+  return { supabaseAdmin, user }
+}
+
 export function requireServerConfig(res, requiredEnvNames) {
   const missing = requiredEnvNames.filter((name) => !process.env[name])
 

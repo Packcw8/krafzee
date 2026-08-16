@@ -47,7 +47,7 @@ function Booth() {
       ] = await Promise.all([
         supabase
           .from('booths')
-          .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url')
+          .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url, is_verified, is_hidden, view_count')
           .eq('id', boothId)
           .single(),
         supabase
@@ -72,9 +72,20 @@ function Booth() {
         setListings([])
         setProjects([])
       } else {
-        setBooth(boothData)
-        setListings(listingData ?? [])
-        setProjects(projectData ?? [])
+        if (boothData?.is_hidden) {
+          setBooth(null)
+          setListings([])
+          setProjects([])
+        } else {
+          setBooth(boothData)
+          setListings((listingData ?? []).filter((listing) => !listing.is_hidden))
+          setProjects(projectData ?? [])
+          fetch('/api/analytics/view', {
+            body: JSON.stringify({ boothId, source: 'booth' }),
+            headers: { 'content-type': 'application/json' },
+            method: 'POST',
+          }).catch(() => {})
+        }
       }
 
       setIsLoading(false)

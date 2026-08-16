@@ -178,6 +178,7 @@ function SellerDashboard() {
   })
   const [sellerBio, setSellerBio] = useState('')
   const [sellerPackages, setSellerPackages] = useState([])
+  const [sellerStats, setSellerStats] = useState(null)
   const [shippingSchemaReady, setShippingSchemaReady] = useState(true)
   const [shippingSettings, setShippingSettings] = useState({
     ship_from_city: '',
@@ -210,6 +211,7 @@ function SellerDashboard() {
     async function loadBooth() {
       if (!user) {
         setIsLoading(false)
+        setSellerStats(null)
         return
       }
 
@@ -230,6 +232,7 @@ function SellerDashboard() {
       if (boothError) {
         setError(getFriendlyError('load your booth'))
         setBooth(null)
+        setSellerStats(null)
       } else if (data) {
         const locationParts = splitLocation(data.location)
         let { data: listingData, error: listingError } = await supabase
@@ -293,10 +296,30 @@ function SellerDashboard() {
         })
         setSellerPackages(shippingSchemaMissing ? [] : packageData ?? [])
         resetListingForMarket(data.market_type)
+
+        if (session?.access_token) {
+          fetch('/api/seller/stats', {
+            headers: {
+              authorization: `Bearer ${session.access_token}`,
+            },
+          })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((statsPayload) => {
+              if (isMounted) {
+                setSellerStats(statsPayload)
+              }
+            })
+            .catch(() => {
+              if (isMounted) {
+                setSellerStats(null)
+              }
+            })
+        }
       } else {
         setBooth(null)
         setListings([])
         setSellerPackages([])
+        setSellerStats(null)
       }
 
       setIsLoading(false)
@@ -307,7 +330,7 @@ function SellerDashboard() {
     return () => {
       isMounted = false
     }
-  }, [user])
+  }, [session?.access_token, user])
 
   useEffect(() => () => {
     if (listingImagePreviewUrl) {
@@ -1031,6 +1054,7 @@ function SellerDashboard() {
   ]
   const stripeRequirements = booth?.stripe_requirements?.currently_due ?? []
   const stripeConnectReady = Boolean(booth?.stripe_charges_enabled)
+  const sellerStatsByListingId = new Map((sellerStats?.listings ?? []).map((listing) => [listing.id, listing]))
   const estimatedShippingCost = listingWeight ? Math.max(4.5, 3.95 + Number(listingWeight) * 0.18) : 0
   const suggestedFreeShippingPrice =
     listingPrice && estimatedShippingCost
@@ -1657,6 +1681,27 @@ function SellerDashboard() {
           )}
         </div>
 
+        {sellerStats && (
+          <div className="seller-stats-grid">
+            <article>
+              <span>Booth views</span>
+              <strong>{sellerStats.totals.boothViews}</strong>
+            </article>
+            <article>
+              <span>Item views</span>
+              <strong>{sellerStats.totals.listingViews}</strong>
+            </article>
+            <article>
+              <span>Listed items</span>
+              <strong>{sellerStats.totals.listings}</strong>
+            </article>
+            <article>
+              <span>Booth status</span>
+              <strong>{sellerStats.booth?.is_verified ? 'Verified' : 'Reviewing'}</strong>
+            </article>
+          </div>
+        )}
+
         {listings.length === 0 ? (
           <article className="state-card">
             <h3>No items listed yet</h3>
@@ -1917,6 +1962,11 @@ function SellerDashboard() {
                           </div>
                         </div>
                         <p>{listing.description}</p>
+                        <div className="seller-listing-insights">
+                          <span>{sellerStatsByListingId.get(listing.id)?.view_count ?? listing.view_count ?? 0} views</span>
+                          <span>{listing.is_verified ? 'Verified' : 'Reviewing'}</span>
+                          {listing.is_hidden && <span>Hidden by admin</span>}
+                        </div>
                         <dl className="listing-meta">
                           <div>
                             <dt>Price</dt>

@@ -12,6 +12,7 @@ dist
 dist-ssr
 mobile/dist*
 mobile/.expo
+supabase/.temp
 *.local
 .env
 .env.*

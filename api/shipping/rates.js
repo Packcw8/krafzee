@@ -91,7 +91,8 @@ export default async function handler(req, res) {
       package_length,
       package_width,
       package_height,
-      dimension_unit
+      dimension_unit,
+      is_hidden
     `)
     .in('id', listingIds)
 
@@ -100,15 +101,25 @@ export default async function handler(req, res) {
     return
   }
 
+  if (listings.some((listing) => listing.is_hidden)) {
+    sendJson(res, 400, { error: 'One or more items in this cart are not available.' })
+    return
+  }
+
   const listingById = new Map(listings.map((listing) => [listing.id, listing]))
   const boothIds = [...new Set(listings.map((listing) => listing.booth_id).filter(Boolean))]
   const { data: booths, error: boothError } = await supabaseAdmin
     .from('booths')
-    .select('id, owner_id, name, owner_name')
+    .select('id, owner_id, name, owner_name, is_hidden')
     .in('id', boothIds)
 
   if (boothError || !booths?.length) {
     sendJson(res, 400, { error: 'We could not confirm seller shipping setup for this cart.' })
+    return
+  }
+
+  if (booths.some((booth) => booth.is_hidden)) {
+    sendJson(res, 400, { error: 'One or more booths in this cart are not available.' })
     return
   }
 
