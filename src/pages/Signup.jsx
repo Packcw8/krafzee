@@ -7,7 +7,7 @@ function getSignupErrorMessage(message) {
     return 'Krafzee has sent too many signup emails in a short time. Please wait a few minutes, then try again.'
   }
 
-  return message
+  return 'Could not create your account. Please check the details and try again.'
 }
 
 function Signup() {

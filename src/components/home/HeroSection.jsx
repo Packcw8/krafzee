@@ -4,23 +4,23 @@ function HeroSection() {
   return (
     <section className="hero-section home-hero" id="home">
       <div className="hero-content">
-        <p className="eyebrow">Modern handmade marketplace</p>
-        <h1>Shop handmade goods from independent makers.</h1>
+        <p className="eyebrow">Modern local marketplace</p>
+        <h1>Shop handcrafted goods and market-table finds.</h1>
         <p className="hero-copy">
-          KrafZee brings together independent American makers selling ceramics,
-          textiles, artwork, candles, woodwork, jewelry, toys, and original
-          goods made by hand.
+          KrafZee keeps maker-made goods and jumble finds in separate lanes so
+          shoppers can browse handcrafted work or hunt through resale tables
+          without the two getting mixed together.
         </p>
         <div className="hero-actions">
-          <Link className="button button-primary" to="/browse">
-            Shop handmade booths
+          <Link className="button button-primary" to="/browse?market=handmade">
+            Shop handcrafted
           </Link>
-          <Link className="button button-secondary" to="/open-your-booth">
-            Open your booth
+          <Link className="button button-secondary" to="/browse?market=jumble">
+            Jumble market
           </Link>
         </div>
         <p className="hero-trust-line">
-          Independent makers &bull; Made in the USA &bull; Free to list
+          Handcrafted booths &bull; Jumble tables &bull; Seller setup after signup
         </p>
       </div>
 
@@ -31,8 +31,8 @@ function HeroSection() {
         <div className="product-collage-tile product-visual product-visual-candles">
           <span>Candles</span>
         </div>
-        <div className="product-collage-tile product-visual product-visual-textiles">
-          <span>Textiles</span>
+        <div className="product-collage-tile product-visual product-visual-clothing">
+          <span>Clothing</span>
         </div>
       </div>
     </section>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProjectCard from '../components/ProjectCard.jsx'
+import { formatListingAttributes, listingSelectFields } from '../data/marketplace.js'
 import { supabase } from '../lib/supabase.js'
 
 function formatPrice(price) {
@@ -51,7 +52,7 @@ function Booth() {
           .single(),
         supabase
           .from('listings')
-          .select('id, booth_id, title, description, price, image_url, market_type, category')
+          .select(listingSelectFields)
           .eq('booth_id', boothId),
         supabase
           .from('projects')
@@ -66,7 +67,7 @@ function Booth() {
       const loadError = boothError || listingError || projectError
 
       if (loadError) {
-        setError(loadError.message)
+        setError('We could not load this booth right now. Please try again soon.')
         setBooth(null)
         setListings([])
         setProjects([])
@@ -172,6 +173,15 @@ function Booth() {
                   <h3>{listing.title}</h3>
                   <p>{listing.description}</p>
                 </div>
+                {formatListingAttributes(listing.attributes).length > 0 && (
+                  <div className="attribute-chip-list">
+                    {formatListingAttributes(listing.attributes).slice(0, 3).map((attribute) => (
+                      <span className="attribute-chip" key={attribute.key}>
+                        {attribute.label}: {attribute.value}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="card-footer">
                   <strong>{formatPrice(listing.price)}</strong>
                   <Link to={`/listing/${listing.id}`}>View listing</Link>

@@ -1,15 +1,30 @@
-import { NavLink } from 'react-router-dom'
+import { ShoppingBag } from 'lucide-react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
+import { useCart } from '../contexts/useCart.js'
 
 const navItems = [
   { to: '/', label: 'Home' },
-  { to: '/browse', label: 'Shop' },
-  { to: '/open-your-booth', label: 'Sell on KrafZee', highlight: true },
-  { to: '/fees', label: 'Fees' },
+  { to: '/browse?market=handmade', label: 'Shop Handcrafted' },
+  { to: '/browse?market=jumble', label: 'Jumble Market' },
 ]
 
 function Navbar() {
   const { logout, role, user } = useAuth()
+  const { cartCount, setIsCartOpen } = useCart()
+  const location = useLocation()
+
+  function isNavItemActive(item) {
+    if (item.to.startsWith('/browse')) {
+      const itemParams = new URLSearchParams(item.to.split('?')[1] || '')
+      const itemMarket = itemParams.get('market') || 'handmade'
+      const currentMarket = new URLSearchParams(location.search).get('market') || 'handmade'
+
+      return location.pathname === '/browse' && currentMarket === itemMarket
+    }
+
+    return location.pathname === item.to
+  }
 
   return (
     <header className="site-header">
@@ -20,11 +35,11 @@ function Navbar() {
       <nav className="nav-links" aria-label="Main navigation">
         {navItems.map((item) => (
           <NavLink
-            className={({ isActive }) =>
+            className={() =>
               [
                 'nav-link',
                 item.highlight ? 'nav-link-sell' : '',
-                isActive ? 'nav-link-active' : '',
+                isNavItemActive(item) ? 'nav-link-active' : '',
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -35,6 +50,22 @@ function Navbar() {
             {item.label}
           </NavLink>
         ))}
+        {user && role === 'buyer' && (
+          <NavLink
+            className={({ isActive }) =>
+              [
+                'nav-link',
+                'nav-link-sell',
+                isActive ? 'nav-link-active' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+            }
+            to="/open-your-booth"
+          >
+            Open a Booth
+          </NavLink>
+        )}
         {(role === 'seller' || role === 'admin') && (
           <NavLink
             className={({ isActive }) =>
@@ -55,6 +86,11 @@ function Navbar() {
             Admin
           </NavLink>
         )}
+        <button className="cart-nav-button" onClick={() => setIsCartOpen(true)} type="button">
+          <ShoppingBag aria-hidden="true" size={18} />
+          <span>Cart</span>
+          {cartCount > 0 && <strong>{cartCount}</strong>}
+        </button>
         {!user ? (
           <>
             <NavLink

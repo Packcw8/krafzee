@@ -1,5 +1,6 @@
 export const categoryVisuals = {
   Candles: 'candles',
+  Clothing: 'clothing',
   Ceramics: 'ceramics',
   Jewelry: 'jewelry',
   'Original goods': 'original',

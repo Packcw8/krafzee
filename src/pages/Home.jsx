@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import BottomSectionNav from '../components/home/BottomSectionNav.jsx'
-import CraftCategories from '../components/home/CraftCategories.jsx'
 import FeaturedBooths from '../components/home/FeaturedBooths.jsx'
 import FeaturedProducts from '../components/home/FeaturedProducts.jsx'
 import HeroSection from '../components/home/HeroSection.jsx'
+import MarketLanes from '../components/home/MarketLanes.jsx'
 import SellerCTA from '../components/home/SellerCTA.jsx'
+import { listingSelectFields } from '../data/marketplace.js'
 import { supabase } from '../lib/supabase.js'
 
 function Home() {
@@ -29,7 +30,7 @@ function Home() {
           .select('id, name, description, owner_name, bio, location, market_type, thumbnail_url'),
         supabase
           .from('listings')
-          .select('id, booth_id, title, description, price, image_url, market_type, category'),
+          .select(listingSelectFields),
       ])
 
       if (!isMounted) {
@@ -39,7 +40,7 @@ function Home() {
       const loadError = boothError || listingError
 
       if (loadError) {
-        setError(loadError.message)
+        setError('We could not load the latest market items right now.')
         setBooths([])
         setListings([])
       } else {
@@ -60,13 +61,13 @@ function Home() {
   return (
     <div className="page-stack home-page-stack">
       <HeroSection />
+      <MarketLanes />
       <FeaturedProducts
         booths={booths}
         error={error}
         isLoading={isLoading}
         listings={listings}
       />
-      <CraftCategories />
       <FeaturedBooths
         booths={booths}
         error={error}

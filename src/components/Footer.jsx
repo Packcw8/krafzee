@@ -6,20 +6,20 @@ function Footer() {
       <div className="footer-brand">
         <img src="/KrafZeeLogo.png" alt="KrafZee.com USA" />
         <p>
-          A modern handmade marketplace for independent makers and shoppers
-          looking for original work.
+          A modern marketplace for handcrafted goods, jumble finds, and local
+          booth-style shopping.
         </p>
       </div>
 
       <div className="footer-link-grid">
         <div>
           <h2>Shop</h2>
-          <Link to="/browse">Shop handmade booths</Link>
-          <Link to="/">Craft categories</Link>
+          <Link to="/browse?market=handmade">Shop handcrafted</Link>
+          <Link to="/browse?market=jumble">Jumble market</Link>
         </div>
         <div>
           <h2>Sellers</h2>
-          <Link to="/open-your-booth">Open a booth</Link>
+          <Link to="/signup">Create an account</Link>
           <Link to="/fees">Seller fees</Link>
           <Link to="/seller-terms">Seller terms</Link>
         </div>
@@ -33,7 +33,7 @@ function Footer() {
       </div>
 
       <p className="footer-fine-print">
-        &copy; {new Date().getFullYear()} KrafZee. Handmade marketplace pages are in preview.
+        &copy; {new Date().getFullYear()} KrafZee. Marketplace pages are in preview.
       </p>
     </footer>
   )

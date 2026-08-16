@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import CartProvider from './contexts/CartContext.jsx'
 import AppLayout from './layouts/AppLayout.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import Booth from './pages/Booth.jsx'
@@ -14,17 +15,22 @@ import OpenYourBooth from './pages/OpenYourBooth.jsx'
 import PolicyPage from './pages/PolicyPage.jsx'
 import SellerDashboard from './pages/SellerDashboard.jsx'
 import Signup from './pages/Signup.jsx'
+import CheckoutCancel from './pages/CheckoutCancel.jsx'
+import CheckoutSuccess from './pages/CheckoutSuccess.jsx'
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
+      <CartProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
             <Route index element={<Home />} />
             <Route path="browse" element={<Browse />} />
             <Route path="booth/:boothId" element={<Booth />} />
             <Route path="listing/:listingId" element={<Listing />} />
+            <Route path="checkout/success" element={<CheckoutSuccess />} />
+            <Route path="checkout/cancel" element={<CheckoutCancel />} />
             <Route path="fees" element={<Fees />} />
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<Signup />} />
@@ -52,9 +58,10 @@ function App() {
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </CartProvider>
     </AuthProvider>
   )
 }

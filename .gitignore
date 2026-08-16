@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+mobile/dist*
+mobile/.expo
 *.local
 .env
 .env.*
@@ -25,3 +27,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ArrowUp, Home, Palette, PackagePlus, ShoppingBag, Store } from 'lucide-react'
+import { ArrowUp, Home, Layers3, Palette, ShoppingBag, Store } from 'lucide-react'
 
 const sectionItems = [
   { id: 'home', label: 'Home', Icon: Home },
+  { id: 'lanes', label: 'Lanes', Icon: Layers3 },
   { id: 'shop', label: 'Shop', Icon: ShoppingBag },
   { id: 'crafts', label: 'Crafts', Icon: Palette },
   { id: 'booths', label: 'Booths', Icon: Store },
-  { id: 'sell', label: 'Sell', Icon: PackagePlus },
 ]
 
 function scrollToSection(id) {

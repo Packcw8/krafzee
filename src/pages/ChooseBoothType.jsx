@@ -18,9 +18,9 @@ function ChooseBoothType() {
           <p className="eyebrow">Maker row</p>
           <h2>Handmade & Artisan Market</h2>
           <p>
-            Best for USA hand-crafted products created in the USA: ceramics,
-            fiber goods, prints, woodwork, candles, soaps, jewelry, small
-            batches, and goods made by hand.
+            Best for USA hand-crafted products created in the USA: clothing,
+            ceramics, fiber goods, prints, woodwork, candles, soaps, jewelry,
+            small batches, and goods made by hand.
           </p>
         </article>
       </div>

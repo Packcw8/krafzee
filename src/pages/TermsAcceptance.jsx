@@ -25,7 +25,7 @@ function TermsAcceptance() {
       .eq('id', user.id)
 
     if (profileError) {
-      setError(profileError.message)
+      setError('We could not finish opening your seller access right now.')
       setIsSubmitting(false)
       return
     }

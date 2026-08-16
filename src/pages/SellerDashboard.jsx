@@ -1,8 +1,29 @@
-import { useEffect, useState } from 'react'
-import { Eye, LayoutDashboard, PackagePlus, Store } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  Eye,
+  LayoutDashboard,
+  PackagePlus,
+  Pencil,
+  RefreshCw,
+  Save,
+  Store,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
-import { categories } from '../data/marketplace.js'
+import {
+  categories,
+  formatListingAttributes,
+  getCategoriesForMarket,
+  getCategoryDetails,
+  getMarketSection,
+  listingSelectFields,
+} from '../data/marketplace.js'
 import { supabase } from '../lib/supabase.js'
 
 function splitLocation(location = '') {
@@ -18,28 +39,107 @@ const sellerTabs = [
   { key: 'view', label: 'View Booth', Icon: Eye },
 ]
 
+const listingSteps = ['Basics', 'Details', 'Selling', 'Review']
+const boothSelectFields = [
+  'id',
+  'owner_id',
+  'name',
+  'description',
+  'owner_name',
+  'bio',
+  'location',
+  'market_type',
+  'thumbnail_url',
+  'stripe_account_id',
+  'stripe_onboarding_complete',
+  'stripe_charges_enabled',
+  'stripe_payouts_enabled',
+  'stripe_requirements',
+].join(', ')
+
+function parseList(value) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function parseVariants(value) {
+  return parseList(value).map((name) => ({ name }))
+}
+
+function variantsToText(variants = []) {
+  return variants.map((variant) => variant.name).filter(Boolean).join(', ')
+}
+
+function getFriendlyError(action) {
+  return `We could not ${action} right now. Please check the details and try again.`
+}
+
+async function readApiResponse(response) {
+  const text = await response.text()
+
+  if (!text) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return {
+      error: response.ok
+        ? ''
+        : 'A server error stopped Stripe setup. Please try again after the Stripe platform profile is complete.',
+    }
+  }
+}
+
 function SellerDashboard() {
-  const { profile, user } = useAuth()
+  const { profile, session, user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('booth')
   const [booth, setBooth] = useState(null)
   const [boothDescription, setBoothDescription] = useState('')
   const [boothName, setBoothName] = useState('')
   const [city, setCity] = useState('')
+  const [editingListingId, setEditingListingId] = useState('')
+  const [editingListingValues, setEditingListingValues] = useState({})
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isListingSaving, setIsListingSaving] = useState(false)
+  const [isListingUpdating, setIsListingUpdating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false)
+  const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
+  const [isStripeLoading, setIsStripeLoading] = useState(false)
+  const [listingAttributes, setListingAttributes] = useState({})
   const [listingCategory, setListingCategory] = useState(categories[0] ?? '')
   const [listingDescription, setListingDescription] = useState('')
   const [listingImageFile, setListingImageFile] = useState(null)
+  const [listingImagePreviewUrl, setListingImagePreviewUrl] = useState('')
+  const [listingMaterials, setListingMaterials] = useState('')
   const [listingPrice, setListingPrice] = useState('')
+  const [listingProcessingTime, setListingProcessingTime] = useState('')
+  const [listingQuantity, setListingQuantity] = useState('1')
+  const [listingStep, setListingStep] = useState(0)
   const [listings, setListings] = useState([])
   const [listingTitle, setListingTitle] = useState('')
+  const [listingVariants, setListingVariants] = useState('')
   const [sellerBio, setSellerBio] = useState('')
   const [stateName, setStateName] = useState('')
+  const [stripeError, setStripeError] = useState('')
+  const [stripeMessage, setStripeMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [thumbnailUrl, setThumbnailUrl] = useState('')
+  const listingFormRef = useRef(null)
+
+  function resetListingForMarket(marketType) {
+    setListingCategory(getCategoriesForMarket(marketType)[0] ?? categories[0] ?? '')
+    setListingAttributes({})
+    setListingMaterials('')
+    setListingVariants('')
+    setListingStep(0)
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -55,7 +155,7 @@ function SellerDashboard() {
 
       const { data, error: boothError } = await supabase
         .from('booths')
-        .select('id, owner_id, name, description, owner_name, bio, location, market_type, thumbnail_url')
+          .select(boothSelectFields)
         .eq('owner_id', user.id)
         .maybeSingle()
 
@@ -64,18 +164,18 @@ function SellerDashboard() {
       }
 
       if (boothError) {
-        setError(boothError.message)
+        setError(getFriendlyError('load your booth'))
         setBooth(null)
       } else if (data) {
         const locationParts = splitLocation(data.location)
         const { data: listingData, error: listingError } = await supabase
           .from('listings')
-          .select('id, booth_id, title, description, price, image_url, market_type, category')
+          .select(listingSelectFields)
           .eq('booth_id', data.id)
           .order('title', { ascending: true })
 
         if (listingError) {
-          setError(listingError.message)
+          setError(getFriendlyError('load your listed items'))
         }
 
         setBooth(data)
@@ -86,6 +186,7 @@ function SellerDashboard() {
         setCity(locationParts.city)
         setStateName(locationParts.state)
         setThumbnailUrl(data.thumbnail_url ?? '')
+        resetListingForMarket(data.market_type)
       } else {
         setBooth(null)
         setListings([])
@@ -100,6 +201,12 @@ function SellerDashboard() {
       isMounted = false
     }
   }, [user])
+
+  useEffect(() => () => {
+    if (listingImagePreviewUrl) {
+      URL.revokeObjectURL(listingImagePreviewUrl)
+    }
+  }, [listingImagePreviewUrl])
 
   async function handleSave(event) {
     event.preventDefault()
@@ -119,19 +226,19 @@ function SellerDashboard() {
       owner_name: ownerName,
       bio: sellerBio.trim(),
       location: `${city.trim()}, ${stateName.trim()}`,
-      market_type: 'handmade',
       thumbnail_url: thumbnailUrl,
+      market_type: booth.market_type || 'handmade',
     }
 
     const { data, error: saveError } = await supabase
       .from('booths')
       .update(updates)
       .eq('owner_id', user.id)
-      .select('id, owner_id, name, description, owner_name, bio, location, market_type, thumbnail_url')
+        .select(boothSelectFields)
       .single()
 
     if (saveError) {
-      setError(saveError.message)
+      setError(getFriendlyError('save your booth details'))
       setIsSaving(false)
       return
     }
@@ -168,7 +275,7 @@ function SellerDashboard() {
       })
 
     if (uploadError) {
-      setError(uploadError.message)
+      setError(getFriendlyError('upload your booth thumbnail'))
       setIsUploadingThumbnail(false)
       return
     }
@@ -185,7 +292,7 @@ function SellerDashboard() {
       .eq('owner_id', user.id)
 
     if (updateError) {
-      setError(updateError.message)
+      setError(getFriendlyError('save your booth thumbnail'))
       setIsUploadingThumbnail(false)
       return
     }
@@ -198,10 +305,244 @@ function SellerDashboard() {
     setIsUploadingThumbnail(false)
   }
 
-  async function handleCreateListing(event) {
+  function handleCreateListing(event) {
     event.preventDefault()
     setError('')
     setSuccessMessage('')
+
+    if (!listingTitle.trim()) {
+      setError('Add an item title before publishing.')
+      setListingStep(0)
+      return
+    }
+
+    if (!listingDescription.trim()) {
+      setError('Add an item description before publishing.')
+      setListingStep(2)
+      return
+    }
+
+    setIsPublishConfirmOpen(true)
+  }
+
+  function startEditingListing(listing) {
+    setError('')
+    setSuccessMessage('')
+    setEditingListingId(listing.id)
+    setEditingListingValues({
+      title: listing.title ?? '',
+      category: listing.category ?? getCategoriesForMarket(booth.market_type)[0] ?? categories[0] ?? '',
+      description: listing.description ?? '',
+      price: listing.price ?? '',
+      quantity: listing.quantity ?? 1,
+      processing_time: listing.processing_time ?? '',
+      materials: (listing.materials ?? []).join(', '),
+      variants: variantsToText(listing.variants ?? []),
+      attributes: listing.attributes ?? {},
+    })
+  }
+
+  function cancelEditingListing() {
+    setEditingListingId('')
+    setEditingListingValues({})
+  }
+
+  function updateEditingListingValue(key, value) {
+    setEditingListingValues((currentValues) => ({
+      ...currentValues,
+      [key]: value,
+    }))
+  }
+
+  function updateEditingListingAttribute(key, value) {
+    setEditingListingValues((currentValues) => ({
+      ...currentValues,
+      attributes: {
+        ...(currentValues.attributes ?? {}),
+        [key]: value,
+      },
+    }))
+  }
+
+  async function saveListingEdits(listing) {
+    setError('')
+    setSuccessMessage('')
+    setIsListingUpdating(true)
+
+    const priceValue =
+      editingListingValues.price === '' || editingListingValues.price === null
+        ? null
+        : Number(editingListingValues.price)
+    const quantityValue = Number(editingListingValues.quantity)
+
+    if (!editingListingValues.title?.trim()) {
+      setError('Add an item title before saving.')
+      setIsListingUpdating(false)
+      return
+    }
+
+    if (!editingListingValues.description?.trim()) {
+      setError('Add an item description before saving.')
+      setIsListingUpdating(false)
+      return
+    }
+
+    if (priceValue !== null && Number.isNaN(priceValue)) {
+      setError('Add a valid price or leave the price blank.')
+      setIsListingUpdating(false)
+      return
+    }
+
+    if (!Number.isInteger(quantityValue) || quantityValue < 0) {
+      setError('Add a whole number for quantity.')
+      setIsListingUpdating(false)
+      return
+    }
+
+    const category = editingListingValues.category
+    const categoryDetailsForEdit = getCategoryDetails(category)
+    const updates = {
+      title: editingListingValues.title.trim(),
+      description: editingListingValues.description.trim(),
+      price: priceValue,
+      category,
+      item_type: categoryDetailsForEdit.itemType,
+      attributes: editingListingValues.attributes ?? {},
+      variants: parseVariants(editingListingValues.variants ?? ''),
+      quantity: quantityValue,
+      processing_time: editingListingValues.processing_time?.trim() || null,
+      materials: parseList(editingListingValues.materials ?? ''),
+    }
+
+    const { data, error: updateError } = await supabase
+      .from('listings')
+      .update(updates)
+      .eq('id', listing.id)
+      .eq('booth_id', booth.id)
+      .select(listingSelectFields)
+      .single()
+
+    if (updateError) {
+      setError(getFriendlyError('save this item'))
+      setIsListingUpdating(false)
+      return
+    }
+
+    setListings((currentListings) =>
+      currentListings.map((currentListing) => (currentListing.id === data.id ? data : currentListing)),
+    )
+    cancelEditingListing()
+    setSuccessMessage('Item updated.')
+    setIsListingUpdating(false)
+  }
+
+  async function deleteListing(listing) {
+    const shouldDelete = window.confirm(`Delete "${listing.title}" from your booth?`)
+
+    if (!shouldDelete) {
+      return
+    }
+
+    setError('')
+    setSuccessMessage('')
+    setIsListingUpdating(true)
+
+    const { error: deleteError } = await supabase
+      .from('listings')
+      .delete()
+      .eq('id', listing.id)
+      .eq('booth_id', booth.id)
+
+    if (deleteError) {
+      setError(getFriendlyError('delete this item'))
+      setIsListingUpdating(false)
+      return
+    }
+
+    setListings((currentListings) => currentListings.filter((currentListing) => currentListing.id !== listing.id))
+    if (editingListingId === listing.id) {
+      cancelEditingListing()
+    }
+    setSuccessMessage('Item removed from your booth.')
+    setIsListingUpdating(false)
+  }
+
+  async function refreshStripeStatus() {
+    if (!session?.access_token) {
+      setStripeError('')
+      setStripeMessage('Sign in again before checking payout status.')
+      return
+    }
+
+    setIsStripeLoading(true)
+    setStripeMessage('')
+    setStripeError('')
+    setError('')
+
+    try {
+      const response = await fetch('/api/stripe/connect/status', {
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+        },
+      })
+      const data = await readApiResponse(response)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'We could not check payout status right now.')
+      }
+
+      if (data.booth) {
+        setBooth((currentBooth) => ({ ...currentBooth, ...data.booth }))
+      }
+
+      setStripeMessage(
+        data.booth?.stripe_charges_enabled
+          ? 'Stripe payouts are ready for this booth.'
+          : 'Stripe is still waiting on seller onboarding details.',
+      )
+    } catch (statusError) {
+      setStripeError(statusError.message)
+    } finally {
+      setIsStripeLoading(false)
+    }
+  }
+
+  async function handleStartStripeOnboarding() {
+    if (!session?.access_token) {
+      setStripeError('')
+      setStripeMessage('Sign in again before setting up payouts.')
+      return
+    }
+
+    setIsStripeLoading(true)
+    setStripeMessage('')
+    setStripeError('')
+    setError('')
+
+    try {
+      const response = await fetch('/api/stripe/connect/start', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${session.access_token}`,
+        },
+      })
+      const data = await readApiResponse(response)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'We could not open Stripe onboarding right now.')
+      }
+
+      window.location.assign(data.url)
+    } catch (onboardingError) {
+      setStripeError(onboardingError.message)
+      setIsStripeLoading(false)
+    }
+  }
+
+  async function confirmCreateListing() {
+    setError('')
+    setSuccessMessage('')
+    setIsPublishConfirmOpen(false)
     setIsListingSaving(true)
 
     let imageUrl = ''
@@ -224,7 +565,7 @@ function SellerDashboard() {
         })
 
       if (uploadError) {
-        setError(uploadError.message)
+        setError(getFriendlyError('upload your item photo'))
         setIsListingSaving(false)
         return
       }
@@ -237,6 +578,7 @@ function SellerDashboard() {
     }
 
     const priceValue = listingPrice ? Number(listingPrice) : null
+    const quantityValue = listingQuantity ? Number(listingQuantity) : 1
 
     if (listingPrice && Number.isNaN(priceValue)) {
       setError('Add a valid price or leave the price blank.')
@@ -244,24 +586,37 @@ function SellerDashboard() {
       return
     }
 
+    if (!Number.isInteger(quantityValue) || quantityValue < 0) {
+      setError('Add a whole number for quantity.')
+      setIsListingSaving(false)
+      return
+    }
+
+    const selectedCategoryDetails = getCategoryDetails(listingCategory)
     const listingPayload = {
       booth_id: booth.id,
       title: listingTitle.trim(),
       description: listingDescription.trim(),
       price: priceValue,
       image_url: imageUrl,
-      market_type: 'handmade',
+      market_type: booth.market_type || 'handmade',
       category: listingCategory,
+      item_type: selectedCategoryDetails.itemType,
+      attributes: listingAttributes,
+      variants: parseVariants(listingVariants),
+      quantity: quantityValue,
+      processing_time: listingProcessingTime.trim() || null,
+      materials: parseList(listingMaterials),
     }
 
     const { data, error: listingError } = await supabase
       .from('listings')
       .insert(listingPayload)
-      .select('id, booth_id, title, description, price, image_url, market_type, category')
+      .select(listingSelectFields)
       .single()
 
     if (listingError) {
-      setError(listingError.message)
+      setError(getFriendlyError('list this item'))
       setIsListingSaving(false)
       return
     }
@@ -270,12 +625,81 @@ function SellerDashboard() {
     setListingTitle('')
     setListingDescription('')
     setListingPrice('')
-    setListingCategory(categories[0] ?? '')
+    setListingCategory(getCategoriesForMarket(booth.market_type)[0] ?? categories[0] ?? '')
     setListingImageFile(null)
-    event.currentTarget.reset()
+    setListingImagePreviewUrl('')
+    setListingAttributes({})
+    setListingMaterials('')
+    setListingProcessingTime('')
+    setListingQuantity('1')
+    setListingStep(0)
+    setListingVariants('')
+    listingFormRef.current?.reset()
     setSuccessMessage('Item listed on your booth table.')
     setIsListingSaving(false)
   }
+
+  function handleListingImageChange(event) {
+    const file = event.target.files?.[0] ?? null
+    setListingImageFile(file)
+    setListingImagePreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl)
+      }
+
+      return file ? URL.createObjectURL(file) : ''
+    })
+  }
+
+  function handleCategoryChange(nextCategory) {
+    setListingCategory(nextCategory)
+    setListingAttributes({})
+  }
+
+  function handleBoothMarketChange(nextMarketType) {
+    setBooth((currentBooth) =>
+      currentBooth ? { ...currentBooth, market_type: nextMarketType } : currentBooth,
+    )
+    resetListingForMarket(nextMarketType)
+    setSuccessMessage('')
+    setError('')
+  }
+
+  function updateListingAttribute(key, value) {
+    setListingAttributes((currentAttributes) => ({
+      ...currentAttributes,
+      [key]: value,
+    }))
+  }
+
+  function goToNextListingStep() {
+    setError('')
+
+    if (listingStep === 0 && !listingTitle.trim()) {
+      setError('Add an item title before continuing.')
+      return
+    }
+
+    setListingStep((currentStep) => Math.min(listingSteps.length - 1, currentStep + 1))
+  }
+
+  function goToPreviousListingStep() {
+    setError('')
+    setListingStep((currentStep) => Math.max(0, currentStep - 1))
+  }
+
+  const activeCategoryDetails = getCategoryDetails(listingCategory)
+  const sellerCategories = getCategoriesForMarket(booth?.market_type)
+  const sellerMarket = getMarketSection(booth?.market_type)
+  const isJumbleBooth = booth?.market_type === 'jumble'
+  const sellerReadinessItems = [
+    { label: 'Booth profile', ready: Boolean(boothName && boothDescription && sellerBio) },
+    { label: 'Booth photo', ready: Boolean(thumbnailUrl) },
+    { label: 'Listed items', ready: listings.length > 0 },
+    { label: 'Stripe Connect', ready: Boolean(booth?.stripe_charges_enabled) },
+  ]
+  const stripeRequirements = booth?.stripe_requirements?.currently_due ?? []
+  const stripeConnectReady = Boolean(booth?.stripe_charges_enabled)
 
   if (isLoading) {
     return (
@@ -311,12 +735,107 @@ function SellerDashboard() {
         </p>
       </section>
 
+      <section className="seller-pro-panel" aria-label="Seller Pro setup">
+        <div>
+          <p className="eyebrow">Seller Pro</p>
+          <h2>Booth readiness</h2>
+          <p>
+            {sellerMarket.title} booth. Keep these pieces tidy before checkout goes live.
+            Stripe Connect handles seller identity, tax details, bank setup, and payouts.
+          </p>
+        </div>
+        <div className="seller-readiness-grid">
+          {sellerReadinessItems.map((item) => (
+            <span className={item.ready ? 'readiness-pill readiness-pill-ready' : 'readiness-pill'} key={item.label}>
+              {item.ready ? 'Ready' : 'Next'}: {item.label}
+            </span>
+          ))}
+        </div>
+        <div className="stripe-connect-card">
+          <div>
+            <CreditCard aria-hidden="true" size={24} />
+            <span>
+              <strong>{stripeConnectReady ? 'Payouts ready' : 'Set up seller payouts'}</strong>
+              <small>
+                {stripeConnectReady
+                  ? 'This booth can be included in Stripe checkout.'
+                  : 'Stripe Express will collect payout and tax details from the seller.'}
+              </small>
+            </span>
+          </div>
+          {stripeRequirements.length > 0 && (
+            <p className="helper-note">
+              Stripe still needs: {stripeRequirements.slice(0, 3).join(', ')}
+              {stripeRequirements.length > 3 ? ', and more' : ''}.
+            </p>
+          )}
+          {searchParams.get('stripe') === 'success' && (
+            <p className="form-success">Stripe sent you back to Krafzee. Refresh payout status to confirm the booth is ready.</p>
+          )}
+          {searchParams.get('stripe') === 'refresh' && (
+            <p className="helper-note">Stripe needs this seller to continue payout setup. Open onboarding again or refresh status after finishing.</p>
+          )}
+          {stripeError && <p className="form-error">{stripeError}</p>}
+          {stripeMessage && <p className="form-success">{stripeMessage}</p>}
+          <div className="stripe-connect-actions">
+            <button
+              className="button button-primary"
+              disabled={isStripeLoading}
+              onClick={handleStartStripeOnboarding}
+              type="button"
+            >
+              {isStripeLoading ? 'Opening Stripe...' : stripeConnectReady ? 'Manage payouts' : 'Set up payouts'}
+            </button>
+            {booth?.stripe_account_id && (
+              <button
+                className="button button-secondary"
+                disabled={isStripeLoading}
+                onClick={refreshStripeStatus}
+                type="button"
+              >
+                <RefreshCw aria-hidden="true" size={17} />
+                Refresh status
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
       {activeTab === 'booth' && (
       <section className="onboarding-card seller-manage-card">
-        <p className="eyebrow">Manage booth</p>
+        <p className="eyebrow">Manage {sellerMarket.title}</p>
         <h2>Update your booth card</h2>
 
         <form className="auth-form booth-onboarding-form" onSubmit={handleSave}>
+          <fieldset className="market-choice-fieldset">
+            <legend>Booth market lane</legend>
+            <label className="market-choice-card">
+              <input
+                checked={!isJumbleBooth}
+                onChange={() => handleBoothMarketChange('handmade')}
+                type="radio"
+              />
+              <span>
+                <strong>Shop Handcrafted</strong>
+                <small>Use this for maker-made clothing, soaps, candles, woodwork, jewelry, art, and original goods.</small>
+              </span>
+            </label>
+            <label className="market-choice-card">
+              <input
+                checked={isJumbleBooth}
+                onChange={() => handleBoothMarketChange('jumble')}
+                type="radio"
+              />
+              <span>
+                <strong>Jumble Market</strong>
+                <small>Use this for resale finds, vintage goods, supplies, tools, books, collectibles, and table items.</small>
+              </span>
+            </label>
+            <small>
+              Save booth details after changing lanes. New listings will use the selected lane.
+            </small>
+          </fieldset>
+
           <div className="thumbnail-manager">
             <div className="thumbnail-preview">
               {thumbnailUrl ? (
@@ -393,8 +912,8 @@ function SellerDashboard() {
 
           <article className="market-choice-card market-choice-static">
             <span>
-              <strong>Handmade & Artisan Market</strong>
-              <small>USA hand-crafted products created in the USA.</small>
+            <strong>{sellerMarket.title}</strong>
+            <small>{sellerMarket.description}</small>
             </span>
           </article>
 
@@ -413,72 +932,278 @@ function SellerDashboard() {
         <p className="eyebrow">List items</p>
         <h2>Add an item to your booth table</h2>
         <p className="helper-note">
-          Add handmade goods for shoppers to browse. Payments are not enabled yet.
+          Listing in {sellerMarket.title}. Move through each step and fill in the details shoppers expect for that type of item.
         </p>
 
-        <form className="auth-form booth-onboarding-form" onSubmit={handleCreateListing}>
-          <div className="form-grid">
-            <label>
-              Item title
-              <input
-                onChange={(event) => setListingTitle(event.target.value)}
-                placeholder="Example: Hand-poured soy candle"
-                required
-                type="text"
-                value={listingTitle}
-              />
-            </label>
-            <label>
-              Price
-              <input
-                min="0"
-                onChange={(event) => setListingPrice(event.target.value)}
-                placeholder="24.00"
-                step="0.01"
-                type="number"
-                value={listingPrice}
-              />
-            </label>
-            <label>
-              Category
-              <select
-                onChange={(event) => setListingCategory(event.target.value)}
-                required
-                value={listingCategory}
+        <form className="auth-form booth-onboarding-form" onSubmit={handleCreateListing} ref={listingFormRef}>
+          <div className="listing-stepper" aria-label="Listing steps">
+            {listingSteps.map((step, index) => (
+              <span
+                className={index === listingStep ? 'listing-step listing-step-active' : 'listing-step'}
+                key={step}
               >
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <span className="listing-step-number">
+                  {index < listingStep ? <CheckCircle2 aria-hidden="true" size={17} /> : index + 1}
+                </span>
+                {step}
+              </span>
+            ))}
           </div>
 
-          <label>
-            Item description
-            <textarea
-              onChange={(event) => setListingDescription(event.target.value)}
-              placeholder="Tell shoppers what it is, how it is made, sizing, materials, or condition notes."
-              required
-              rows="4"
-              value={listingDescription}
-            />
-          </label>
+          {listingStep === 0 && (
+            <div className="listing-slide">
+              <div className="form-grid">
+                <label>
+                  Item title
+                  <input
+                    onChange={(event) => setListingTitle(event.target.value)}
+                    placeholder={isJumbleBooth ? 'Example: Vintage Pyrex mixing bowl' : 'Example: Hand-poured soy candle'}
+                    required
+                    type="text"
+                    value={listingTitle}
+                  />
+                </label>
+                <label>
+                  Category
+                  <select
+                    onChange={(event) => handleCategoryChange(event.target.value)}
+                    required
+                    value={listingCategory}
+                  >
+                    {sellerCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Item photo
+                  <input
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleListingImageChange}
+                    type="file"
+                  />
+                </label>
+                <small>Use a clear photo. JPG, PNG, and WebP are supported.</small>
+              </div>
+              {listingImagePreviewUrl && (
+                <figure className="listing-image-preview">
+                  <img src={listingImagePreviewUrl} alt="" />
+                  <figcaption>{listingImageFile?.name}</figcaption>
+                </figure>
+              )}
+            </div>
+          )}
 
-          <label>
-            Item photo
-            <input
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(event) => setListingImageFile(event.target.files?.[0] ?? null)}
-              type="file"
-            />
-            <small>Use a clear photo. JPG, PNG, and WebP are supported.</small>
-          </label>
+          {listingStep === 1 && (
+            <div className="listing-slide">
+              <div className="section-heading">
+                <p className="eyebrow">{listingCategory}</p>
+                <h3>{activeCategoryDetails.itemType} details</h3>
+                <p className="helper-note">
+                  These fields change by category so shoppers see the details they expect.
+                </p>
+              </div>
+              <div className="form-grid form-grid-two">
+                {activeCategoryDetails.fields.map((field) => (
+                  <label key={field.key}>
+                    {field.label}
+                    {field.type === 'select' ? (
+                      <select
+                        onChange={(event) => updateListingAttribute(field.key, event.target.value)}
+                        value={listingAttributes[field.key] ?? ''}
+                      >
+                        <option value="">Select one</option>
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        onChange={(event) => updateListingAttribute(field.key, event.target.value)}
+                        placeholder={field.placeholder}
+                        type="text"
+                        value={listingAttributes[field.key] ?? ''}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+              <label>
+                Materials
+                <input
+                  onChange={(event) => setListingMaterials(event.target.value)}
+                  placeholder={isJumbleBooth ? 'Example: glass, metal, mixed craft supplies' : 'Example: soy wax, cotton wick, glass jar'}
+                  type="text"
+                  value={listingMaterials}
+                />
+              </label>
+              <small>
+                {isJumbleBooth ? 'Separate materials, included pieces, or lot notes with commas.' : 'Separate multiple materials with commas.'}
+              </small>
+            </div>
+          )}
 
-          <button className="button button-primary" disabled={isListingSaving} type="submit">
-            {isListingSaving ? 'Listing item...' : 'List item'}
-          </button>
+          {listingStep === 2 && (
+            <div className="listing-slide">
+              <div className="form-grid">
+                <label>
+                  Price
+                  <input
+                    min="0"
+                    onChange={(event) => setListingPrice(event.target.value)}
+                    placeholder="24.00"
+                    step="0.01"
+                    type="number"
+                    value={listingPrice}
+                  />
+                </label>
+                <label>
+                  Quantity available
+                  <input
+                    min="0"
+                    onChange={(event) => setListingQuantity(event.target.value)}
+                    required
+                    step="1"
+                    type="number"
+                    value={listingQuantity}
+                  />
+                </label>
+                <label>
+                  Processing time
+                  <input
+                    onChange={(event) => setListingProcessingTime(event.target.value)}
+                    placeholder={isJumbleBooth ? 'Example: ready for pickup this week' : 'Example: ready in 3 business days'}
+                    type="text"
+                    value={listingProcessingTime}
+                  />
+                </label>
+              </div>
+              <label>
+                {activeCategoryDetails.optionLabel || 'Options or variants'}
+                <input
+                  onChange={(event) => setListingVariants(event.target.value)}
+                  placeholder={activeCategoryDetails.optionPlaceholder || 'Example: small, medium, large'}
+                  type="text"
+                  value={listingVariants}
+                />
+              </label>
+              <small>Separate sizes, colors, scents, or options with commas.</small>
+              <label>
+                Item description
+                <textarea
+                  onChange={(event) => setListingDescription(event.target.value)}
+                  placeholder={isJumbleBooth ? 'Tell shoppers what it is, condition, what is included, pickup notes, and any flaws.' : 'Tell shoppers what it is, how it is made, sizing, materials, or care notes.'}
+                  required
+                  rows="4"
+                  value={listingDescription}
+                />
+              </label>
+            </div>
+          )}
+
+          {listingStep === 3 && (
+            <div className="listing-slide listing-review">
+              <article className="listing-review-card">
+                <p className="eyebrow">{listingCategory}</p>
+                <h3>{listingTitle || 'Untitled item'}</h3>
+                <p>{listingDescription || 'No description added yet.'}</p>
+                <dl className="listing-meta">
+                  <div>
+                    <dt>Price</dt>
+                    <dd>{listingPrice ? `$${Number(listingPrice).toFixed(2)}` : 'Not posted'}</dd>
+                  </div>
+                  <div>
+                    <dt>Quantity</dt>
+                    <dd>{listingQuantity || '1'}</dd>
+                  </div>
+                  <div>
+                    <dt>Processing</dt>
+                    <dd>{listingProcessingTime || 'Not posted'}</dd>
+                  </div>
+                </dl>
+                {formatListingAttributes(listingAttributes).length > 0 && (
+                  <div className="attribute-chip-list">
+                    {formatListingAttributes(listingAttributes).map((attribute) => (
+                      <span className="attribute-chip" key={attribute.key}>
+                        {attribute.label}: {attribute.value}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </article>
+            </div>
+          )}
+
+          {error && <p className="form-error">{error}</p>}
+          {successMessage && <p className="form-success">{successMessage}</p>}
+
+          <div className="listing-step-actions">
+            <button
+              className="button button-secondary"
+              disabled={listingStep === 0 || isListingSaving}
+              onClick={goToPreviousListingStep}
+              type="button"
+            >
+              <ChevronLeft aria-hidden="true" size={18} />
+              Back
+            </button>
+            {listingStep < listingSteps.length - 1 && (
+              <button
+                className="button button-secondary"
+                disabled={isListingSaving}
+                onClick={goToNextListingStep}
+                type="button"
+              >
+                Next
+                <ChevronRight aria-hidden="true" size={18} />
+              </button>
+            )}
+            {listingStep === listingSteps.length - 1 && (
+              <button className="button button-primary" disabled={isListingSaving} type="submit">
+                {isListingSaving ? 'Listing item...' : 'List item'}
+              </button>
+            )}
+          </div>
+
+          {isPublishConfirmOpen && (
+            <div className="modal-backdrop" role="presentation">
+              <section
+                aria-labelledby="publish-listing-title"
+                aria-modal="true"
+                className="confirm-modal"
+                role="dialog"
+              >
+                <p className="eyebrow">Ready to publish</p>
+                <h3 id="publish-listing-title">List this item?</h3>
+                <p>
+                  This will add {listingTitle || 'this item'} to your public booth table.
+                  You can keep editing before it goes live.
+                </p>
+                <div className="listing-step-actions">
+                  <button
+                    className="button button-secondary"
+                    disabled={isListingSaving}
+                    onClick={() => setIsPublishConfirmOpen(false)}
+                    type="button"
+                  >
+                    Keep editing
+                  </button>
+                  <button
+                    className="button button-primary"
+                    disabled={isListingSaving}
+                    onClick={confirmCreateListing}
+                    type="button"
+                  >
+                    {isListingSaving ? 'Publishing...' : 'Publish item'}
+                  </button>
+                </div>
+              </section>
+            </div>
+          )}
         </form>
       </section>
       )}
@@ -488,39 +1213,226 @@ function SellerDashboard() {
         <div className="section-heading">
           <p className="eyebrow">Your table</p>
           <h2>Listed items</h2>
+          {!stripeConnectReady && (
+            <p className="helper-note">
+              Shoppers can browse these items, but checkout stays locked until Stripe Connect payouts are ready for this booth.
+            </p>
+          )}
         </div>
 
         {listings.length === 0 ? (
           <article className="state-card">
             <h3>No items listed yet</h3>
-            <p>Add your first handmade good so shoppers have something to pick up from the table.</p>
+            <p>
+              {isJumbleBooth
+                ? 'Add your first jumble find so shoppers can browse your resale table.'
+                : 'Add your first handcrafted good so shoppers have something to pick up from the table.'}
+            </p>
           </article>
         ) : (
           <div className="seller-listing-grid">
-            {listings.map((listing) => (
-              <article className="seller-listing-card" key={listing.id}>
-                {listing.image_url ? (
-                  <img src={listing.image_url} alt="" className="seller-listing-image" />
-                ) : (
-                  <span className="seller-listing-image">{listing.category || 'Item'}</span>
-                )}
-                <div>
-                  <h3>{listing.title}</h3>
-                  <p>{listing.description}</p>
-                  <dl className="listing-meta">
-                    <div>
-                      <dt>Price</dt>
-                      <dd>{listing.price ? `$${Number(listing.price).toFixed(2)}` : 'Not posted'}</dd>
-                    </div>
-                    <div>
-                      <dt>Category</dt>
-                      <dd>{listing.category || 'Original goods'}</dd>
-                    </div>
-                  </dl>
-                  <Link to={`/listing/${listing.id}`}>View listing</Link>
-                </div>
-              </article>
-            ))}
+            {listings.map((listing) => {
+              const isEditingListing = editingListingId === listing.id
+              const editCategoryDetails = getCategoryDetails(
+                editingListingValues.category || listing.category,
+              )
+
+              return (
+                <article className="seller-listing-card" key={listing.id}>
+                  {listing.image_url ? (
+                    <img src={listing.image_url} alt="" className="seller-listing-image" />
+                  ) : (
+                    <span className="seller-listing-image">{listing.category || 'Item'}</span>
+                  )}
+                  <div>
+                    {isEditingListing ? (
+                      <div className="seller-listing-edit-form">
+                        <div className="form-grid form-grid-two">
+                          <label>
+                            Item title
+                            <input
+                              onChange={(event) => updateEditingListingValue('title', event.target.value)}
+                              type="text"
+                              value={editingListingValues.title ?? ''}
+                            />
+                          </label>
+                          <label>
+                            Category
+                            <select
+                              onChange={(event) => {
+                                updateEditingListingValue('category', event.target.value)
+                                updateEditingListingValue('attributes', {})
+                              }}
+                              value={editingListingValues.category ?? ''}
+                            >
+                              {sellerCategories.map((category) => (
+                                <option key={category} value={category}>
+                                  {category}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Price
+                            <input
+                              min="0"
+                              onChange={(event) => updateEditingListingValue('price', event.target.value)}
+                              step="0.01"
+                              type="number"
+                              value={editingListingValues.price ?? ''}
+                            />
+                          </label>
+                          <label>
+                            Quantity
+                            <input
+                              min="0"
+                              onChange={(event) => updateEditingListingValue('quantity', event.target.value)}
+                              step="1"
+                              type="number"
+                              value={editingListingValues.quantity ?? 1}
+                            />
+                          </label>
+                        </div>
+                        <label>
+                          Item description
+                          <textarea
+                            onChange={(event) => updateEditingListingValue('description', event.target.value)}
+                            rows="3"
+                            value={editingListingValues.description ?? ''}
+                          />
+                        </label>
+                        <div className="form-grid form-grid-two">
+                          {editCategoryDetails.fields.map((field) => (
+                            <label key={field.key}>
+                              {field.label}
+                              {field.type === 'select' ? (
+                                <select
+                                  onChange={(event) => updateEditingListingAttribute(field.key, event.target.value)}
+                                  value={editingListingValues.attributes?.[field.key] ?? ''}
+                                >
+                                  <option value="">Select one</option>
+                                  {field.options.map((option) => (
+                                    <option key={option} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  onChange={(event) => updateEditingListingAttribute(field.key, event.target.value)}
+                                  placeholder={field.placeholder}
+                                  type="text"
+                                  value={editingListingValues.attributes?.[field.key] ?? ''}
+                                />
+                              )}
+                            </label>
+                          ))}
+                        </div>
+                        <div className="form-grid form-grid-two">
+                          <label>
+                            Materials
+                            <input
+                              onChange={(event) => updateEditingListingValue('materials', event.target.value)}
+                              placeholder="Separate with commas"
+                              type="text"
+                              value={editingListingValues.materials ?? ''}
+                            />
+                          </label>
+                          <label>
+                            {editCategoryDetails.optionLabel || 'Options or variants'}
+                            <input
+                              onChange={(event) => updateEditingListingValue('variants', event.target.value)}
+                              placeholder={editCategoryDetails.optionPlaceholder}
+                              type="text"
+                              value={editingListingValues.variants ?? ''}
+                            />
+                          </label>
+                        </div>
+                        <label>
+                          Processing time
+                          <input
+                            onChange={(event) => updateEditingListingValue('processing_time', event.target.value)}
+                            type="text"
+                            value={editingListingValues.processing_time ?? ''}
+                          />
+                        </label>
+                        <div className="seller-listing-actions">
+                          <button
+                            className="button button-primary"
+                            disabled={isListingUpdating}
+                            onClick={() => saveListingEdits(listing)}
+                            type="button"
+                          >
+                            <Save aria-hidden="true" size={17} />
+                            {isListingUpdating ? 'Saving...' : 'Save changes'}
+                          </button>
+                          <button
+                            className="button button-secondary"
+                            disabled={isListingUpdating}
+                            onClick={cancelEditingListing}
+                            type="button"
+                          >
+                            <X aria-hidden="true" size={17} />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="seller-listing-header">
+                          <h3>{listing.title}</h3>
+                          <div className="seller-listing-actions">
+                            <button
+                              className="button button-secondary"
+                              disabled={isListingUpdating}
+                              onClick={() => startEditingListing(listing)}
+                              type="button"
+                            >
+                              <Pencil aria-hidden="true" size={17} />
+                              Edit
+                            </button>
+                            <button
+                              className="button button-secondary seller-danger-button"
+                              disabled={isListingUpdating}
+                              onClick={() => deleteListing(listing)}
+                              type="button"
+                            >
+                              <Trash2 aria-hidden="true" size={17} />
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        <p>{listing.description}</p>
+                        <dl className="listing-meta">
+                          <div>
+                            <dt>Price</dt>
+                            <dd>{listing.price ? `$${Number(listing.price).toFixed(2)}` : 'Not posted'}</dd>
+                          </div>
+                          <div>
+                            <dt>Category</dt>
+                            <dd>{listing.category || 'Original goods'}</dd>
+                          </div>
+                          <div>
+                            <dt>Quantity</dt>
+                            <dd>{listing.quantity ?? 1}</dd>
+                          </div>
+                        </dl>
+                        {formatListingAttributes(listing.attributes).length > 0 && (
+                          <div className="attribute-chip-list">
+                            {formatListingAttributes(listing.attributes).slice(0, 4).map((attribute) => (
+                              <span className="attribute-chip" key={attribute.key}>
+                                {attribute.label}: {attribute.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <Link to={`/listing/${listing.id}`}>View listing</Link>
+                      </>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
           </div>
         )}
       </section>

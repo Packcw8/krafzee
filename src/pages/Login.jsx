@@ -10,7 +10,7 @@ function getLoginErrorMessage(message) {
     return 'Please confirm your email before logging in. Check your inbox or resend the confirmation email below.'
   }
 
-  return message
+  return 'We could not log you in. Please check your email and password.'
 }
 
 function Login() {
@@ -71,7 +71,7 @@ function Login() {
     setIsSubmitting(false)
 
     if (resendError) {
-      setError(resendError.message)
+      setError('We could not send a new confirmation email right now.')
       return
     }
 

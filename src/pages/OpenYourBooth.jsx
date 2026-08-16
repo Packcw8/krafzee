@@ -8,6 +8,7 @@ function OpenYourBooth() {
   const { profile, refreshProfile, user } = useAuth()
   const [agreementAccepted, setAgreementAccepted] = useState(false)
   const [boothDescription, setBoothDescription] = useState('')
+  const [boothMarketType, setBoothMarketType] = useState('handmade')
   const [boothName, setBoothName] = useState('')
   const [city, setCity] = useState('')
   const [error, setError] = useState('')
@@ -63,7 +64,7 @@ function OpenYourBooth() {
       owner_name: ownerName,
       bio: sellerBio.trim(),
       location,
-      market_type: 'handmade',
+      market_type: boothMarketType,
     }
 
     const { data: existingBooth, error: lookupError } = await supabase
@@ -73,7 +74,7 @@ function OpenYourBooth() {
       .maybeSingle()
 
     if (lookupError) {
-      setError(lookupError.message)
+      setError('We could not check your booth yet. Please try again.')
       setIsSubmitting(false)
       return
     }
@@ -86,7 +87,7 @@ function OpenYourBooth() {
       : await supabase.from('booths').insert(boothPayload)
 
     if (boothError) {
-      setError(boothError.message)
+      setError('We could not save your booth yet. Please check the details and try again.')
       setIsSubmitting(false)
       return
     }
@@ -97,7 +98,7 @@ function OpenYourBooth() {
       .eq('id', user.id)
 
     if (profileError) {
-      setError(profileError.message)
+      setError('Your booth was saved, but we could not finish updating your seller access.')
       setIsSubmitting(false)
       return
     }
@@ -116,11 +117,37 @@ function OpenYourBooth() {
       <p className="eyebrow">Open Your Booth</p>
       <h1>Open Your Booth</h1>
       <p>
-        Start with a simple booth. Add products, projects, and payment setup
-        later.
+        Start with a simple booth. Choose handcrafted for maker-made goods or
+        jumble for resale finds and table items.
       </p>
 
       <form className="auth-form booth-onboarding-form" onSubmit={handleSubmit}>
+        <fieldset className="market-choice-fieldset">
+          <legend>Choose your market lane</legend>
+          <label className="market-choice-card">
+            <input
+              checked={boothMarketType === 'handmade'}
+              onChange={() => setBoothMarketType('handmade')}
+              type="radio"
+            />
+            <span>
+              <strong>Shop Handcrafted</strong>
+              <small>For clothing, soaps, candles, ceramics, art, woodwork, jewelry, and goods made by hand.</small>
+            </span>
+          </label>
+          <label className="market-choice-card">
+            <input
+              checked={boothMarketType === 'jumble'}
+              onChange={() => setBoothMarketType('jumble')}
+              type="radio"
+            />
+            <span>
+              <strong>Jumble Market</strong>
+              <small>For vintage finds, supplies, collectibles, tools, books, home goods, and resale tables.</small>
+            </span>
+          </label>
+        </fieldset>
+
         <div className="form-grid">
           <label>
             Booth name
@@ -178,8 +205,12 @@ function OpenYourBooth() {
 
         <article className="market-choice-card market-choice-static">
           <span>
-            <strong>Handmade & Artisan Market</strong>
-            <small>USA hand-crafted products created in the USA.</small>
+            <strong>{boothMarketType === 'jumble' ? 'Jumble Market' : 'Shop Handcrafted'}</strong>
+            <small>
+              {boothMarketType === 'jumble'
+                ? 'Resale and table finds stay separate from handmade goods.'
+                : 'USA hand-crafted products created in the USA.'}
+            </small>
           </span>
         </article>
 

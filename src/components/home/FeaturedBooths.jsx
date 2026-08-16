@@ -13,9 +13,9 @@ function FeaturedBooths({ booths = [], error = '', isLoading = false, listings =
   return (
     <section className="section" id="booths">
       <div className="section-heading">
-        <p className="eyebrow">Meet the makers</p>
-        <h2>Featured maker booths</h2>
-        <p>Step into live booths shaped around a craft, a place, and a maker story.</p>
+        <p className="eyebrow">Meet the booths</p>
+        <h2>Featured market tables</h2>
+        <p>Step into live booths shaped around a craft, a find, a place, and a seller story.</p>
       </div>
 
       {isLoading && (
@@ -36,7 +36,7 @@ function FeaturedBooths({ booths = [], error = '', isLoading = false, listings =
         <article className="state-card homepage-state-card">
           <h3>No booths are open yet</h3>
           <p>New seller booths will show here once the market starts filling up.</p>
-          <Link to="/open-your-booth">Open your booth</Link>
+          <Link to="/signup">Create an account</Link>
         </article>
       )}
 
@@ -51,7 +51,7 @@ function FeaturedBooths({ booths = [], error = '', isLoading = false, listings =
               </div>
               <div className="booth-card-body">
                 <span className="maker-avatar">{booth.name?.charAt(0) || 'K'}</span>
-                <p className="eyebrow">{booth.owner_name || 'Maker booth'}</p>
+                <p className="eyebrow">{booth.market_type === 'jumble' ? 'Jumble booth' : 'Handcrafted booth'}</p>
                 <h3>{booth.name}</h3>
                 <p>{booth.description}</p>
                 <dl className="listing-meta">
