@@ -31,7 +31,7 @@ function Signup() {
         data: {
           display_name: displayName.trim(),
         },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}/login`,
       },
     })
 

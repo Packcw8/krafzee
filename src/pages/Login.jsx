@@ -104,6 +104,9 @@ function Login() {
             type="password"
             value={password}
           />
+          <Link className="auth-helper-link" to="/forgot-password">
+            Forgot password?
+          </Link>
         </label>
 
         {error && <p className="form-error">{error}</p>}
