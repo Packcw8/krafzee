@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import AuthRecoveryRedirect from './components/AuthRecoveryRedirect.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import CartProvider from './contexts/CartContext.jsx'
@@ -28,6 +29,7 @@ function App() {
     <AuthProvider>
       <CartProvider>
         <BrowserRouter>
+          <AuthRecoveryRedirect />
           <Routes>
             <Route element={<AppLayout />}>
             <Route index element={<Home />} />
@@ -40,7 +42,9 @@ function App() {
             <Route path="login" element={<Login />} />
             <Route path="signup" element={<Signup />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="forgotpassword" element={<Navigate to="/forgot-password" replace />} />
             <Route path="reset-password" element={<ResetPassword />} />
+            <Route path="resetpassword" element={<ResetPassword />} />
             <Route path="open-your-booth" element={<OpenYourBooth />} />
             <Route path="choose-booth-type" element={<Navigate to="/open-your-booth" replace />} />
             <Route path="seller-profile-setup" element={<Navigate to="/open-your-booth" replace />} />
