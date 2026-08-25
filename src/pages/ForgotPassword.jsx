@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getPublicUrl } from '../lib/site-url.js'
 import { supabase } from '../lib/supabase.js'
 
 function getResetErrorMessage(message) {
@@ -25,7 +26,7 @@ function ForgotPassword() {
     setIsSubmitting(true)
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getPublicUrl('/reset-password'),
     })
 
     setIsSubmitting(false)

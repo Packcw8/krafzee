@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getPublicUrl } from '../lib/site-url.js'
 import { supabase } from '../lib/supabase.js'
 
 function getSignupErrorMessage(message) {
@@ -31,7 +32,7 @@ function Signup() {
         data: {
           display_name: displayName.trim(),
         },
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: getPublicUrl('/login'),
       },
     })
 

@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import CartProvider from './contexts/CartContext.jsx'
 import AppLayout from './layouts/AppLayout.jsx'
+import { redirectToPublicHost } from './lib/site-url.js'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import Booth from './pages/Booth.jsx'
 import Browse from './pages/Browse.jsx'
@@ -21,6 +22,8 @@ import CheckoutCancel from './pages/CheckoutCancel.jsx'
 import CheckoutSuccess from './pages/CheckoutSuccess.jsx'
 
 function App() {
+  redirectToPublicHost()
+
   return (
     <AuthProvider>
       <CartProvider>
