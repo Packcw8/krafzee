@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/useAuth.js'
+import { getPublicUrl } from '../lib/site-url.js'
 import { supabase } from '../lib/supabase.js'
 
 function getLoginErrorMessage(message) {
@@ -64,7 +65,7 @@ function Login() {
       type: 'signup',
       email: email.trim(),
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getPublicUrl('/login'),
       },
     })
 

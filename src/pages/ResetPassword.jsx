@@ -14,6 +14,26 @@ function ResetPassword() {
   useEffect(() => {
     let isMounted = true
 
+    async function hydrateRecoverySession() {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+      const searchParams = new URLSearchParams(window.location.search)
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token')
+
+      if (accessToken && refreshToken) {
+        const { data } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+
+        if (isMounted) {
+          setIsReady(Boolean(data.session))
+        }
+      }
+    }
+
+    hydrateRecoverySession()
+
     supabase.auth.getSession().then(({ data }) => {
       if (isMounted) {
         setIsReady(Boolean(data.session))

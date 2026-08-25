@@ -20,9 +20,13 @@ function AuthRecoveryRedirect() {
   useEffect(() => {
     let recoveryTimer = null
 
+    function navigateToReset() {
+      navigate(`/reset-password${window.location.search}${window.location.hash}`, { replace: true })
+    }
+
     if (hasRecoveryMarker() && !isResetPath(location.pathname)) {
       recoveryTimer = window.setTimeout(() => {
-        navigate('/reset-password', { replace: true })
+        navigateToReset()
       }, 500)
     }
 
@@ -30,7 +34,7 @@ function AuthRecoveryRedirect() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY' && !isResetPath(window.location.pathname)) {
-        navigate('/reset-password', { replace: true })
+        navigateToReset()
       }
     })
 
