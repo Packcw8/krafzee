@@ -1,3 +1,4 @@
+import { listingProgress } from '../data/listingProgress.js'
 import { useEffect, useRef, useState } from 'react'
 import {
   CheckCircle2,
@@ -42,7 +43,7 @@ const sellerTabs = [
   { key: 'view', label: 'View Booth', Icon: Eye },
 ]
 
-const listingSteps = ['Basics', 'Details', 'Selling', 'Review']
+const listingSteps = ['Add photos', 'Item details', 'Price and quantity', 'Shipping or pickup', 'Review and publish']
 const boothSelectFields = [
   'id',
   'owner_id',
@@ -135,7 +136,7 @@ async function readApiResponse(response) {
 function SellerDashboard() {
   const { profile, session, user } = useAuth()
   const [searchParams] = useSearchParams()
-  const [activeTab, setActiveTab] = useState('booth')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'list' ? 'list' : 'booth')
   const [booth, setBooth] = useState(null)
   const [boothDescription, setBoothDescription] = useState('')
   const [boothName, setBoothName] = useState('')
@@ -148,13 +149,15 @@ function SellerDashboard() {
   const [isListingUpdating, setIsListingUpdating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false)
-  const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
   const [isStripeLoading, setIsStripeLoading] = useState(false)
   const [listingAttributes, setListingAttributes] = useState({})
   const [listingCategory, setListingCategory] = useState(categories[0] ?? '')
   const [listingDescription, setListingDescription] = useState('')
-  const [listingImageFile, setListingImageFile] = useState(null)
-  const [listingImagePreviewUrl, setListingImagePreviewUrl] = useState('')
+  const [listingPhotos, setListingPhotos] = useState([])
+  const [drafts, setDrafts] = useState([])
+  const [draftId, setDraftId] = useState(() => crypto.randomUUID())
+  const [isDraftSaving, setIsDraftSaving] = useState(false)
+  const [reviewed, setReviewed] = useState(false)
   const [listingMaterials, setListingMaterials] = useState('')
   const [listingPrice, setListingPrice] = useState('')
   const [listingProcessingTime, setListingProcessingTime] = useState('')
@@ -332,11 +335,17 @@ function SellerDashboard() {
     }
   }, [session?.access_token, user])
 
-  useEffect(() => () => {
-    if (listingImagePreviewUrl) {
-      URL.revokeObjectURL(listingImagePreviewUrl)
-    }
-  }, [listingImagePreviewUrl])
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    supabase.from('listing_drafts').select('id, payload, updated_at').eq('owner_id', user.id)
+      .order('updated_at', { ascending: false }).then(({ data, error: draftError }) => {
+        if (!active) return
+        if (draftError) setError('Saved drafts are unavailable right now. Please try again later.')
+        else setDrafts(data || [])
+      })
+    return () => { active = false }
+  }, [user])
 
   async function handleSave(event) {
     event.preventDefault()
@@ -437,22 +446,13 @@ function SellerDashboard() {
 
   function handleCreateListing(event) {
     event.preventDefault()
-    setError('')
-    setSuccessMessage('')
-
-    if (!listingTitle.trim()) {
-      setError('Add an item title before publishing.')
-      setListingStep(0)
+    const incomplete = stepComplete.findIndex((complete) => !complete)
+    if (incomplete !== -1) {
+      setListingStep(incomplete)
+      setError(`Complete “${listingSteps[incomplete]}” before publishing.`)
       return
     }
-
-    if (!listingDescription.trim()) {
-      setError('Add an item description before publishing.')
-      setListingStep(2)
-      return
-    }
-
-    setIsPublishConfirmOpen(true)
+    confirmCreateListing()
   }
 
   function startEditingListing(listing) {
@@ -698,7 +698,6 @@ function SellerDashboard() {
   async function confirmCreateListing() {
     setError('')
     setSuccessMessage('')
-    setIsPublishConfirmOpen(false)
     setIsListingSaving(true)
 
     if (!shippingSchemaReady) {
@@ -707,37 +706,10 @@ function SellerDashboard() {
       return
     }
 
-    let imageUrl = ''
-
-    if (listingImageFile) {
-      if (!listingImageFile.type.startsWith('image/')) {
-        setError('Choose an image file for your item photo.')
-        setIsListingSaving(false)
-        return
-      }
-
-      const fileExtension = listingImageFile.name.split('.').pop()?.toLowerCase() || 'jpg'
-      const filePath = `${user.id}/${booth.id}/${Date.now()}.${fileExtension}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('listing-images')
-        .upload(filePath, listingImageFile, {
-          cacheControl: '3600',
-          upsert: true,
-        })
-
-      if (uploadError) {
-        setError(getFriendlyError('upload your item photo'))
-        setIsListingSaving(false)
-        return
-      }
-
-      const { data } = supabase.storage
-        .from('listing-images')
-        .getPublicUrl(filePath)
-
-      imageUrl = data.publicUrl
-    }
+    let photoUrls
+    try { photoUrls = await uploadListingPhotos() }
+    catch (uploadError) { setError(uploadError.message); setIsListingSaving(false); return }
+    const imageUrl = photoUrls[0] || ''
 
     const priceValue = listingPrice ? Number(listingPrice) : null
     const quantityValue = listingQuantity ? Number(listingQuantity) : 1
@@ -762,11 +734,13 @@ function SellerDashboard() {
 
     const selectedCategoryDetails = getCategoryDetails(listingCategory)
     const listingPayload = {
+      id: draftId,
       booth_id: booth.id,
       title: listingTitle.trim(),
       description: listingDescription.trim(),
       price: priceValue,
       image_url: imageUrl,
+      image_urls: photoUrls,
       market_type: booth.market_type || 'handmade',
       category: listingCategory,
       item_type: selectedCategoryDetails.itemType,
@@ -785,14 +759,23 @@ function SellerDashboard() {
       dimension_unit: 'in',
     }
 
-    const { data, error: listingError } = await supabase
+    let { data, error: listingError } = await supabase
       .from('listings')
       .insert(listingPayload)
       .select(listingSelectFields)
       .single()
 
+    const galleryUnavailable = listingError && ['PGRST204', '42703'].includes(listingError.code) && listingError.message?.includes('image_urls')
+    if (galleryUnavailable && photoUrls.length === 1) {
+      const legacyPayload = { ...listingPayload }
+      delete legacyPayload.image_urls
+      const retry = await supabase.from('listings').insert(legacyPayload).select(listingSelectFields).single()
+      data = retry.data
+      listingError = retry.error
+    }
+
     if (listingError) {
-      setError(getFriendlyError('list this item'))
+      setError(galleryUnavailable && photoUrls.length > 1 ? 'Multiple-photo publishing is temporarily unavailable. Your photos and details are still here; please try again later.' : getFriendlyError('list this item'))
       setIsListingSaving(false)
       return
     }
@@ -802,8 +785,8 @@ function SellerDashboard() {
     setListingDescription('')
     setListingPrice('')
     setListingCategory(getCategoriesForMarket(booth.market_type)[0] ?? categories[0] ?? '')
-    setListingImageFile(null)
-    setListingImagePreviewUrl('')
+    setListingPhotos([])
+    setReviewed(false)
     setListingAttributes({})
     setListingMaterials('')
     setListingProcessingTime('')
@@ -817,19 +800,118 @@ function SellerDashboard() {
     setListingStep(0)
     setListingVariants('')
     listingFormRef.current?.reset()
-    setSuccessMessage('Item listed on your booth table.')
+    const { error: draftDeleteError } = await supabase.from('listing_drafts').delete().eq('id', draftId).eq('owner_id', user.id)
+    setDrafts((current) => current.filter((draft) => draft.id !== draftId))
+    setDraftId(crypto.randomUUID())
+    setSuccessMessage(draftDeleteError ? 'Item published. The old draft could not be removed; do not publish that draft again.' : 'Item listed on your booth table.')
     setIsListingSaving(false)
   }
 
-  function handleListingImageChange(event) {
-    const file = event.target.files?.[0] ?? null
-    setListingImageFile(file)
-    setListingImagePreviewUrl((currentUrl) => {
-      if (currentUrl) {
-        URL.revokeObjectURL(currentUrl)
-      }
+  async function uploadListingPhotos() {
+    const uploaded = []
+    for (const photo of listingPhotos) {
+      if (photo.url) { uploaded.push(photo.url); continue }
+      const filePath = `${user.id}/${booth.id}/${photo.id}.${photo.file.name.split('.').pop().toLowerCase()}`
+      const { error: uploadError } = await supabase.storage.from('listing-images').upload(filePath, photo.file, { upsert: true })
+      if (uploadError) throw new Error('A photo could not be uploaded. Your changes are still here; please retry.')
+      const { data } = supabase.storage.from('listing-images').getPublicUrl(filePath)
+      uploaded.push(data.publicUrl)
+      setListingPhotos((current) => current.map((entry) => entry.id === photo.id ? { ...entry, url: data.publicUrl } : entry))
+    }
+    return uploaded
+  }
 
-      return file ? URL.createObjectURL(file) : ''
+  async function saveListingDraft() {
+    setIsDraftSaving(true)
+    setError('')
+    setSuccessMessage('')
+    try {
+      const urls = await uploadListingPhotos()
+      const payload = { listingTitle, listingCategory, listingDescription, listingPrice, listingQuantity, listingProcessingTime, listingMaterials, listingVariants, listingAttributes, listingRequiresShipping, listingFreeShipping, listingWeight, listingPackageLength, listingPackageWidth, listingPackageHeight, listingStep, photos: urls }
+      const { data, error: draftError } = await supabase.from('listing_drafts').upsert({ id: draftId, owner_id: user.id, payload, updated_at: new Date().toISOString() }).select().single()
+      if (draftError) throw new Error('Your draft could not be saved. Please retry; your changes are still here.')
+      setDrafts((current) => [data, ...current.filter((draft) => draft.id !== data.id)])
+      setSuccessMessage('Draft saved. You can return to it from Saved drafts.')
+      return true
+    } catch (draftError) { setError(draftError.message); return false }
+    finally { setIsDraftSaving(false) }
+  }
+
+  async function startNewItem() {
+    if ((listingTitle || listingPhotos.length || listingDescription || listingPrice || listingMaterials || listingVariants || listingWeight || listingProcessingTime) && !(await saveListingDraft())) return
+    setDraftId(crypto.randomUUID())
+    setListingTitle('')
+    setListingDescription('')
+    setListingPhotos([])
+    setListingPrice('')
+    setListingQuantity('1')
+    setListingProcessingTime('')
+    setListingWeight('')
+    setListingRequiresShipping(true)
+    setListingFreeShipping(false)
+    setListingPackageLength('')
+    setListingPackageWidth('')
+    setListingPackageHeight('')
+    resetListingForMarket(booth.market_type)
+    setReviewed(false)
+    setActiveTab('list')
+    setSuccessMessage('Start your next item. Your saved drafts are in Listed Items.')
+  }
+
+  async function resumeDraft(draft) {
+    if (draft.id !== draftId && (listingTitle || listingPhotos.length || listingDescription || listingPrice || listingMaterials || listingVariants || listingWeight || listingProcessingTime) && !(await saveListingDraft())) return
+    const { payload } = draft
+    setListingTitle(payload.listingTitle ?? '')
+    setListingCategory(payload.listingCategory ?? '')
+    setListingDescription(payload.listingDescription ?? '')
+    setListingPrice(payload.listingPrice ?? '')
+    setListingQuantity(payload.listingQuantity ?? '1')
+    setListingProcessingTime(payload.listingProcessingTime ?? '')
+    setListingMaterials(payload.listingMaterials ?? '')
+    setListingVariants(payload.listingVariants ?? '')
+    setListingAttributes(payload.listingAttributes ?? {})
+    setListingRequiresShipping(payload.listingRequiresShipping ?? true)
+    setListingFreeShipping(payload.listingFreeShipping ?? false)
+    setListingWeight(payload.listingWeight ?? '')
+    setListingPackageLength(payload.listingPackageLength ?? '')
+    setListingPackageWidth(payload.listingPackageWidth ?? '')
+    setListingPackageHeight(payload.listingPackageHeight ?? '')
+    setListingPhotos((payload.photos || []).map((url) => ({ id: crypto.randomUUID(), url })))
+    setListingStep(payload.listingStep || 0)
+    setDraftId(draft.id)
+    setReviewed(false)
+    setError('')
+    setSuccessMessage('Draft opened.')
+    setActiveTab('list')
+  }
+
+  async function handleListingImageChange(event) {
+    const files = Array.from(event.target.files || [])
+    event.target.value = ''
+    if (listingPhotos.length + files.length > 10) { setError('Choose up to 10 photos per item.'); return }
+    if (files.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10485760)) {
+      setError('Use JPG, PNG, or WebP photos, up to 10 MB each.'); return
+    }
+    setIsDraftSaving(true)
+    try {
+      const photos = await Promise.all(files.map((file) => new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve({ id: crypto.randomUUID(), file, preview: reader.result })
+        reader.onerror = () => reject(new Error('Photo could not be read. Please try again.'))
+        reader.readAsDataURL(file)
+      })))
+      setListingPhotos((current) => [...current, ...photos])
+      setError('')
+    } catch (photoError) { setError(photoError.message) }
+    finally { setIsDraftSaving(false) }
+  }
+
+  function movePhoto(index, delta) {
+    setReviewed(false)
+    setListingPhotos((current) => {
+      const next = [...current]
+      ;[next[index], next[index + delta]] = [next[index + delta], next[index]]
+      return next
     })
   }
 
@@ -1018,22 +1100,6 @@ function SellerDashboard() {
 
   function goToNextListingStep() {
     setError('')
-
-    if (listingStep === 2 && !shippingSchemaReady) {
-      setError(shippingSchemaSetupMessage)
-      return
-    }
-
-    if (listingStep === 0 && !listingTitle.trim()) {
-      setError('Add an item title before continuing.')
-      return
-    }
-
-    if (listingStep === 2 && listingRequiresShipping && !Number(listingWeight)) {
-      setError('Add a shipping weight before continuing.')
-      return
-    }
-
     setListingStep((currentStep) => Math.min(listingSteps.length - 1, currentStep + 1))
   }
 
@@ -1042,12 +1108,14 @@ function SellerDashboard() {
     setListingStep((currentStep) => Math.max(0, currentStep - 1))
   }
 
+  const stepComplete = listingProgress({ photos: listingPhotos, title: listingTitle, category: listingCategory, description: listingDescription, price: listingPrice, quantity: listingQuantity, requiresShipping: listingRequiresShipping, weight: listingWeight, reviewed })
+
   const activeCategoryDetails = getCategoryDetails(listingCategory)
   const sellerCategories = getCategoriesForMarket(booth?.market_type)
   const sellerMarket = getMarketSection(booth?.market_type)
   const isJumbleBooth = booth?.market_type === 'jumble'
   const sellerReadinessItems = [
-    { label: 'Booth profile', ready: Boolean(boothName && boothDescription && sellerBio) },
+    { label: 'Booth profile', ready: Boolean(boothName && city && stateName) },
     { label: 'Booth photo', ready: Boolean(thumbnailUrl) },
     { label: 'Listed items', ready: listings.length > 0 },
     { label: 'Stripe Connect', ready: Boolean(booth?.stripe_charges_enabled) },
@@ -1088,14 +1156,13 @@ function SellerDashboard() {
     <div className="page-stack seller-dashboard-stack">
       <section className="page-intro">
         <p className="eyebrow">Seller dashboard</p>
-        <h1>Your booth table is ready.</h1>
+        <h1>{activeTab === 'list' ? 'Let’s list your item.' : 'Your booth table is ready.'}</h1>
         <p>
-          Welcome {profile?.display_name ?? 'seller'}. Keep your booth details
-          fresh so shoppers know what kind of table they are walking up to.
+          {activeTab === 'list' ? 'Add your photos, fill in the details, and publish when you are ready.' : `Welcome ${profile?.display_name ?? 'seller'}. Manage your booth and items here.`}
         </p>
       </section>
 
-      <section className="seller-pro-panel" aria-label="Seller Pro setup">
+      {activeTab !== 'list' && <section className="seller-pro-panel" aria-label="Seller Pro setup">
         <div>
           <p className="eyebrow">Seller Pro</p>
           <h2>Booth readiness</h2>
@@ -1159,7 +1226,7 @@ function SellerDashboard() {
             )}
           </div>
         </div>
-      </section>
+      </section>}
 
       {activeTab === 'booth' && (
       <section className="onboarding-card seller-manage-card">
@@ -1167,6 +1234,7 @@ function SellerDashboard() {
         <h2>Update your booth card</h2>
 
         <form className="auth-form booth-onboarding-form" onSubmit={handleSave}>
+          <aside className="required-field-guide" aria-label="Required booth fields"><strong>Required booth details</strong><ul><li>Market lane</li><li>Booth name</li><li>City and state</li></ul></aside>
           <fieldset className="market-choice-fieldset">
             <legend>Booth market lane</legend>
             <label className="market-choice-card">
@@ -1222,7 +1290,7 @@ function SellerDashboard() {
 
           <div className="form-grid">
             <label>
-              Booth name
+              <span className="field-label-row">Booth name <span className="required-badge">Required</span></span>
               <input
                 onChange={(event) => setBoothName(event.target.value)}
                 required
@@ -1231,7 +1299,7 @@ function SellerDashboard() {
               />
             </label>
             <label>
-              City
+              <span className="field-label-row">City <span className="required-badge">Required</span></span>
               <input
                 onChange={(event) => setCity(event.target.value)}
                 required
@@ -1240,7 +1308,7 @@ function SellerDashboard() {
               />
             </label>
             <label>
-              State
+              <span className="field-label-row">State <span className="required-badge">Required</span></span>
               <input
                 onChange={(event) => setStateName(event.target.value)}
                 required
@@ -1251,20 +1319,18 @@ function SellerDashboard() {
           </div>
 
           <label>
-            Booth description
+            <span className="field-label-row">Booth description <span className="optional-badge">Optional</span></span>
             <textarea
               onChange={(event) => setBoothDescription(event.target.value)}
-              required
               rows="4"
               value={boothDescription}
             />
           </label>
 
           <label>
-            Seller bio
+            <span className="field-label-row">Seller bio <span className="optional-badge">Optional</span></span>
             <textarea
               onChange={(event) => setSellerBio(event.target.value)}
-              required
               rows="4"
               value={sellerBio}
             />
@@ -1287,34 +1353,44 @@ function SellerDashboard() {
       </section>
       )}
 
+      {activeTab === 'items' && drafts.length > 0 && <section className="onboarding-card">
+        <h2>Saved drafts</h2><p>Only you can see these unfinished items.</p><button type="button" className="button button-secondary" disabled={isDraftSaving || isListingSaving} onClick={startNewItem}>New item</button>
+        {drafts.map((draft) => <div className="draft-row" key={draft.id}><span>{draft.payload.listingTitle || 'Untitled item'}</span>
+          <button className="button button-secondary" type="button" disabled={isDraftSaving || isListingSaving} onClick={() => resumeDraft(draft)}>Resume draft</button></div>)}
+      </section>}
       {activeTab === 'list' && (
       <section className="onboarding-card seller-manage-card">
         <p className="eyebrow">List items</p>
         <h2>Add an item to your booth table</h2>
         <p className="helper-note">
-          Listing in {sellerMarket.title}. Move through each step and fill in the details shoppers expect for that type of item.
+          Listing in {sellerMarket.title}. Complete the checklist below; green checks show which steps are ready.
         </p>
 
-        <form className="auth-form booth-onboarding-form" onSubmit={handleCreateListing} ref={listingFormRef}>
-          <div className="listing-stepper" aria-label="Listing steps">
-            {listingSteps.map((step, index) => (
-              <span
-                className={index === listingStep ? 'listing-step listing-step-active' : 'listing-step'}
-                key={step}
-              >
-                <span className="listing-step-number">
-                  {index < listingStep ? <CheckCircle2 aria-hidden="true" size={17} /> : index + 1}
-                </span>
-                {step}
-              </span>
-            ))}
+        <form className="auth-form booth-onboarding-form" noValidate onChange={(event) => { if (event.target.name !== 'reviewed') setReviewed(false) }} onSubmit={handleCreateListing} ref={listingFormRef}>
+          <fieldset className="listing-editor-fields" disabled={isListingSaving || isDraftSaving}>
+          <div className="listing-stepper" aria-label="Listing checklist">
+            {listingSteps.map((step, index) => <button type="button" onClick={() => setListingStep(index)}
+              className={`listing-step ${index === listingStep ? 'listing-step-active' : ''} ${stepComplete[index] ? 'listing-step-complete' : ''}`}
+              aria-current={index === listingStep ? 'step' : undefined} key={step}>
+              {stepComplete[index] ? <CheckCircle2 aria-label="Complete" size={20} /> : <span className="listing-step-number">{index + 1}</span>}{step}
+            </button>)}
           </div>
-
-          {listingStep === 0 && (
+          <p className="helper-note" aria-live="polite">{stepComplete.filter(Boolean).length} of 5 steps complete. You can save a draft at any time.</p>
+          {listingStep === 0 && <div className="listing-slide">
+            <label>Add photos (up to 10)<input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={handleListingImageChange} /></label>
+            <small>JPG, PNG, or WebP, up to 10 MB each. The first photo is your cover.</small>
+            <div className="photo-editor">{listingPhotos.map((photo, index) => <figure key={photo.id}>
+              <img src={photo.url || photo.preview} alt={`Item photo ${index + 1}`} />
+              <figcaption>{index === 0 ? 'Cover photo' : `Photo ${index + 1}`}</figcaption>
+              <div><button type="button" disabled={index === 0} aria-label={`Move photo ${index + 1} earlier`} onClick={() => movePhoto(index, -1)}>←</button>
+              <button type="button" disabled={index === listingPhotos.length - 1} aria-label={`Move photo ${index + 1} later`} onClick={() => movePhoto(index, 1)}>→</button>
+              <button type="button" onClick={() => { setReviewed(false); setListingPhotos((current) => current.filter((entry) => entry.id !== photo.id)) }}>Remove</button></div>
+            </figure>)}</div>
+          </div>}
+          {listingStep === 1 && (
             <div className="listing-slide">
-              <div className="form-grid">
                 <label>
-                  Item title
+                  <span className="field-label-row">Item title <span className="required-badge">Required</span></span>
                   <input
                     onChange={(event) => setListingTitle(event.target.value)}
                     placeholder={isJumbleBooth ? 'Example: Vintage Pyrex mixing bowl' : 'Example: Hand-poured soy candle'}
@@ -1324,7 +1400,7 @@ function SellerDashboard() {
                   />
                 </label>
                 <label>
-                  Category
+                  <span className="field-label-row">Category <span className="required-badge">Required</span></span>
                   <select
                     onChange={(event) => handleCategoryChange(event.target.value)}
                     required
@@ -1337,27 +1413,17 @@ function SellerDashboard() {
                     ))}
                   </select>
                 </label>
-                <label>
-                  Item photo
-                  <input
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={handleListingImageChange}
-                    type="file"
-                  />
-                </label>
-                <small>Use a clear photo. JPG, PNG, and WebP are supported.</small>
-              </div>
-              {listingImagePreviewUrl && (
-                <figure className="listing-image-preview">
-                  <img src={listingImagePreviewUrl} alt="" />
-                  <figcaption>{listingImageFile?.name}</figcaption>
-                </figure>
-              )}
-            </div>
-          )}
-
-          {listingStep === 1 && (
-            <div className="listing-slide">
+              <label>
+                <span className="field-label-row">Item description <span className="required-badge">Required</span></span>
+                <textarea
+                  onChange={(event) => setListingDescription(event.target.value)}
+                  placeholder={isJumbleBooth ? 'Tell shoppers what it is, condition, what is included, pickup notes, and any flaws.' : 'Tell shoppers what it is, how it is made, sizing, materials, or care notes.'}
+                  required
+                  rows="4"
+                  value={listingDescription}
+                />
+              </label>
+<details><summary>More details (optional)</summary>
               <div className="section-heading">
                 <p className="eyebrow">{listingCategory}</p>
                 <h3>{activeCategoryDetails.itemType} details</h3>
@@ -1404,6 +1470,7 @@ function SellerDashboard() {
               <small>
                 {isJumbleBooth ? 'Separate materials, included pieces, or lot notes with commas.' : 'Separate multiple materials with commas.'}
               </small>
+</details>
             </div>
           )}
 
@@ -1411,7 +1478,7 @@ function SellerDashboard() {
             <div className="listing-slide">
               <div className="form-grid">
                 <label>
-                  Price
+                  <span className="field-label-row">Price <span className="required-badge">Required</span></span>
                   <input
                     min="0"
                     onChange={(event) => setListingPrice(event.target.value)}
@@ -1422,7 +1489,7 @@ function SellerDashboard() {
                   />
                 </label>
                 <label>
-                  Quantity available
+                  <span className="field-label-row">Quantity available <span className="required-badge">Required</span></span>
                   <input
                     min="0"
                     onChange={(event) => setListingQuantity(event.target.value)}
@@ -1433,7 +1500,7 @@ function SellerDashboard() {
                   />
                 </label>
                 <label>
-                  Processing time
+                  <span className="field-label-row">Processing time <span className="optional-badge">Optional</span></span>
                   <input
                     onChange={(event) => setListingProcessingTime(event.target.value)}
                     placeholder={isJumbleBooth ? 'Example: ready for pickup this week' : 'Example: ready in 3 business days'}
@@ -1452,7 +1519,12 @@ function SellerDashboard() {
                 />
               </label>
               <small>Separate sizes, colors, scents, or options with commas.</small>
-              <section className="shipping-editor-panel">
+
+
+            </div>
+          )}
+
+          {listingStep === 3 && <div className="listing-slide">              <section className="shipping-editor-panel">
                 <h3>Shipping</h3>
                 <label className="checkbox-row">
                   <input
@@ -1499,7 +1571,7 @@ function SellerDashboard() {
                             <strong>{`$${suggestedFreeShippingPrice}`}</strong>
                             <button
                               className="button button-secondary"
-                              onClick={() => setListingPrice(suggestedFreeShippingPrice)}
+                              onClick={() => { setReviewed(false); setListingPrice(suggestedFreeShippingPrice) }}
                               type="button"
                             >
                               Use Suggested Price
@@ -1552,26 +1624,17 @@ function SellerDashboard() {
                     </div>
                   </>
                 )}
-              </section>
-              <label>
-                Item description
-                <textarea
-                  onChange={(event) => setListingDescription(event.target.value)}
-                  placeholder={isJumbleBooth ? 'Tell shoppers what it is, condition, what is included, pickup notes, and any flaws.' : 'Tell shoppers what it is, how it is made, sizing, materials, or care notes.'}
-                  required
-                  rows="4"
-                  value={listingDescription}
-                />
-              </label>
-            </div>
-          )}
+              </section><p className="helper-note">Turn shipping off for local pickup.</p></div>}
 
-          {listingStep === 3 && (
+          {listingStep === 4 && (
             <div className="listing-slide listing-review">
+              <div className="photo-editor">{listingPhotos.map((photo) => <img key={photo.id} src={photo.url || photo.preview} alt="Listing preview" />)}</div>
+              <label className="checkbox-row"><input type="checkbox" name="reviewed" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} />I have reviewed this item and it is ready to publish.</label>
               <article className="listing-review-card">
                 <p className="eyebrow">{listingCategory}</p>
                 <h3>{listingTitle || 'Untitled item'}</h3>
                 <p>{listingDescription || 'No description added yet.'}</p>
+                <p>{listingRequiresShipping ? (listingFreeShipping ? 'Free shipping' : 'Buyer pays calculated shipping') : 'Local pickup'}</p>
                 <dl className="listing-meta">
                   <div>
                     <dt>Price</dt>
@@ -1603,6 +1666,7 @@ function SellerDashboard() {
           {successMessage && <p className="form-success">{successMessage}</p>}
 
           <div className="listing-step-actions">
+            <button className="button button-secondary" type="button" onClick={saveListingDraft}>{isDraftSaving ? 'Saving draft…' : 'Save as draft'}</button>
             <button
               className="button button-secondary"
               disabled={listingStep === 0 || isListingSaving}
@@ -1625,46 +1689,12 @@ function SellerDashboard() {
             )}
             {listingStep === listingSteps.length - 1 && (
               <button className="button button-primary" disabled={isListingSaving} type="submit">
-                {isListingSaving ? 'Listing item...' : 'List item'}
+                {isListingSaving ? 'Publishing...' : 'Publish item'}
               </button>
             )}
           </div>
 
-          {isPublishConfirmOpen && (
-            <div className="modal-backdrop" role="presentation">
-              <section
-                aria-labelledby="publish-listing-title"
-                aria-modal="true"
-                className="confirm-modal"
-                role="dialog"
-              >
-                <p className="eyebrow">Ready to publish</p>
-                <h3 id="publish-listing-title">List this item?</h3>
-                <p>
-                  This will add {listingTitle || 'this item'} to your public booth table.
-                  You can keep editing before it goes live.
-                </p>
-                <div className="listing-step-actions">
-                  <button
-                    className="button button-secondary"
-                    disabled={isListingSaving}
-                    onClick={() => setIsPublishConfirmOpen(false)}
-                    type="button"
-                  >
-                    Keep editing
-                  </button>
-                  <button
-                    className="button button-primary"
-                    disabled={isListingSaving}
-                    onClick={confirmCreateListing}
-                    type="button"
-                  >
-                    {isListingSaving ? 'Publishing...' : 'Publish item'}
-                  </button>
-                </div>
-              </section>
-            </div>
-          )}
+          </fieldset>
         </form>
       </section>
       )}
@@ -1731,7 +1761,7 @@ function SellerDashboard() {
                       <div className="seller-listing-edit-form">
                         <div className="form-grid form-grid-two">
                           <label>
-                            Item title
+                            <span className="field-label-row">Item title <span className="required-badge">Required</span></span>
                             <input
                               onChange={(event) => updateEditingListingValue('title', event.target.value)}
                               type="text"
@@ -1739,7 +1769,7 @@ function SellerDashboard() {
                             />
                           </label>
                           <label>
-                            Category
+                            <span className="field-label-row">Category <span className="required-badge">Required</span></span>
                             <select
                               onChange={(event) => {
                                 updateEditingListingValue('category', event.target.value)
@@ -1755,7 +1785,7 @@ function SellerDashboard() {
                             </select>
                           </label>
                           <label>
-                            Price
+                            <span className="field-label-row">Price <span className="optional-badge">Optional</span></span>
                             <input
                               min="0"
                               onChange={(event) => updateEditingListingValue('price', event.target.value)}
@@ -1776,7 +1806,7 @@ function SellerDashboard() {
                           </label>
                         </div>
                         <label>
-                          Item description
+                          <span className="field-label-row">Item description <span className="required-badge">Required</span></span>
                           <textarea
                             onChange={(event) => updateEditingListingValue('description', event.target.value)}
                             rows="3"
@@ -1831,7 +1861,7 @@ function SellerDashboard() {
                           </label>
                         </div>
                         <label>
-                          Processing time
+                          <span className="field-label-row">Processing time <span className="optional-badge">Optional</span></span>
                           <input
                             onChange={(event) => updateEditingListingValue('processing_time', event.target.value)}
                             type="text"
@@ -2058,7 +2088,7 @@ function SellerDashboard() {
                 />
               </label>
               <label>
-                City
+                <span className="field-label-row">City <span className="required-badge">Required</span></span>
                 <input
                   onChange={(event) => updateShippingSetting('ship_from_city', event.target.value)}
                   required
@@ -2067,7 +2097,7 @@ function SellerDashboard() {
                 />
               </label>
               <label>
-                State
+                <span className="field-label-row">State <span className="required-badge">Required</span></span>
                 <input
                   onChange={(event) => updateShippingSetting('ship_from_state', event.target.value)}
                   required
@@ -2245,6 +2275,7 @@ function SellerDashboard() {
           <button
             className={activeTab === key ? 'seller-bottom-tab seller-bottom-tab-active' : 'seller-bottom-tab'}
             key={key}
+            disabled={isDraftSaving || isListingSaving}
             onClick={() => setActiveTab(key)}
             type="button"
           >

@@ -1,3 +1,4 @@
+import ItemGallery from '../components/ItemGallery.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProjectCard from '../components/ProjectCard.jsx'
@@ -175,11 +176,7 @@ function Booth() {
           <div className="listing-grid">
             {listings.map((listing) => (
               <article className="listing-card" key={listing.id}>
-                {listing.image_url ? (
-                  <img src={listing.image_url} alt="" className="card-image" />
-                ) : (
-                  <span className="listing-image">{listing.category || 'Find'}</span>
-                )}
+                <ItemGallery listing={listing} compact />
                 <div>
                   <h3>{listing.title}</h3>
                   <p>{listing.description}</p>

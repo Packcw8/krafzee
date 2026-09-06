@@ -1,3 +1,4 @@
+import ItemGallery from '../components/ItemGallery.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, ShoppingBag } from 'lucide-react'
@@ -239,11 +240,7 @@ function Browse() {
 
                       return (
                         <article className="listing-card market-item-card" key={listing.id}>
-                          {listing.image_url ? (
-                            <img src={listing.image_url} alt="" className="card-image" />
-                          ) : (
-                            <span className="listing-image">{category}</span>
-                          )}
+                          <ItemGallery listing={listing} compact />
                           <div>
                             <h3>{listing.title}</h3>
                             <p>{listing.description}</p>

@@ -108,7 +108,7 @@ function OpenYourBooth() {
     setIsSubmitting(false)
 
     setTimeout(() => {
-      navigate('/seller-dashboard')
+      navigate('/seller-dashboard?tab=list')
     }, 700)
   }
 
@@ -122,6 +122,16 @@ function OpenYourBooth() {
       </p>
 
       <form className="auth-form booth-onboarding-form" onSubmit={handleSubmit}>
+        <aside className="required-field-guide" aria-label="Required booth fields">
+          <strong>Required to open your booth</strong>
+          <ul>
+            <li>Market lane</li>
+            <li>Booth name</li>
+            <li>City and state</li>
+            <li>Marketplace agreement</li>
+          </ul>
+        </aside>
+
         <fieldset className="market-choice-fieldset">
           <legend>Choose your market lane</legend>
           <label className="market-choice-card">
@@ -150,7 +160,7 @@ function OpenYourBooth() {
 
         <div className="form-grid">
           <label>
-            Booth name
+            <span className="field-label-row">Booth name <span className="required-badge">Required</span></span>
             <input
               onChange={(event) => setBoothName(event.target.value)}
               placeholder="Example: Cody's Products and Goods"
@@ -160,7 +170,7 @@ function OpenYourBooth() {
             />
           </label>
           <label>
-            City
+            <span className="field-label-row">City <span className="required-badge">Required</span></span>
             <input
               onChange={(event) => setCity(event.target.value)}
               placeholder="Example: Knoxville"
@@ -170,7 +180,7 @@ function OpenYourBooth() {
             />
           </label>
           <label>
-            State
+            <span className="field-label-row">State <span className="required-badge">Required</span></span>
             <input
               onChange={(event) => setStateName(event.target.value)}
               placeholder="Example: TN"
@@ -181,28 +191,28 @@ function OpenYourBooth() {
           </label>
         </div>
 
+        <details><summary>Add your booth story (optional)</summary>
         <label>
-          Booth description
+          <span className="field-label-row">Booth description <span className="optional-badge">Optional</span></span>
           <textarea
             onChange={(event) => setBoothDescription(event.target.value)}
             placeholder="Tell shoppers what they will find on your table."
-            required
             rows="4"
             value={boothDescription}
           />
         </label>
 
         <label>
-          Seller bio
+          <span className="field-label-row">Seller bio <span className="optional-badge">Optional</span></span>
           <textarea
             onChange={(event) => setSellerBio(event.target.value)}
             placeholder="Share a little about you, your goods, and your market style."
-            required
             rows="4"
             value={sellerBio}
           />
         </label>
 
+        </details>
         <article className="market-choice-card market-choice-static">
           <span>
             <strong>{boothMarketType === 'jumble' ? 'Jumble Market' : 'Shop Handcrafted'}</strong>

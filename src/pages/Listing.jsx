@@ -1,3 +1,4 @@
+import ItemGallery from '../components/ItemGallery.jsx'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCart } from '../contexts/useCart.js'
@@ -20,6 +21,7 @@ function Listing() {
   const [listing, setListing] = useState(null)
   const [listingBooth, setListingBooth] = useState(null)
   const [selectedOption, setSelectedOption] = useState('')
+  const [neighbors, setNeighbors] = useState([])
 
   useEffect(() => {
     let isMounted = true
@@ -27,6 +29,7 @@ function Listing() {
     async function loadListing() {
       setIsLoading(true)
       setError('')
+      setNeighbors([])
 
       const { data, error: listingError } = await supabase
         .from('listings')
@@ -53,6 +56,12 @@ function Listing() {
 
         setListing(data)
         setSelectedOption(data?.variants?.[0]?.name ?? '')
+        if (data) {
+          const { data: nearby } = await supabase.from('listings').select('id, title, booths!inner(is_hidden)')
+            .eq('market_type', data.market_type || 'handmade').eq('is_hidden', false).eq('booths.is_hidden', false).order('title').order('id')
+          if (isMounted) setNeighbors(nearby || [])
+        }
+
 
         if (data?.booth_id) {
           const { data: boothData } = await supabase
@@ -124,12 +133,12 @@ function Listing() {
 
   return (
     <div className="listing-detail">
-      <section className="listing-photo" aria-label={`${listing.title} preview`}>
-        {listing.image_url ? (
-          <img src={listing.image_url} alt="" className="card-image" />
-        ) : (
-          <span>{listing.category || 'Handmade listing'}</span>
-        )}
+      <section className="listing-photo" aria-label={`${listing.title} photos`}>
+        <ItemGallery key={listing.id} listing={listing} />
+        <nav className="product-navigation" aria-label="Browse products">
+          {neighbors.findIndex((item) => item.id === listing.id) > 0 && <Link className="button button-secondary" to={`/listing/${neighbors[neighbors.findIndex((item) => item.id === listing.id) - 1].id}`}>← Previous item</Link>}
+          {neighbors.findIndex((item) => item.id === listing.id) >= 0 && neighbors.findIndex((item) => item.id === listing.id) < neighbors.length - 1 && <Link className="button button-secondary" to={`/listing/${neighbors[neighbors.findIndex((item) => item.id === listing.id) + 1].id}`}>Next item →</Link>}
+        </nav>
       </section>
 
       <section className="listing-info">

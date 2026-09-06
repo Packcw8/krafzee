@@ -86,3 +86,12 @@ Recommended repository root is this folder:
 ```bash
 C:\python\Krafzee\krafzee
 ```
+
+
+## Listing checklist, galleries, and drafts
+
+Apply `supabase/migrations/007_listing_galleries_drafts.sql` before deploying this frontend. It adds `listings.image_urls` and an owner-only `listing_drafts` table. Existing listings keep their single-photo fallback. Drafts do not enter public listing queries; their photos use the existing public listing-image bucket, so image URLs are accessible to anyone who has the URL.
+
+Sellers complete five validated steps, save partial drafts, resume them under Listed Items, and publish once ready. Photos support up to ten JPG/PNG/WebP files, each up to 10 MB. Reordering the first photo sets the cover. Product pages and browse/booth cards support galleries, and product pages link to adjacent visible items in the same market, ordered by title and ID.
+
+Run `node --test src/data/listingProgress.test.js`, `npm run lint`, and `npm run build`. Browser verification should cover draft save/reload/resume, photo ordering and removal, publication failure/retry, keyboard and touch gallery navigation, and narrow screens. Database RLS must also be verified against a migrated test project with two different sellers before release.

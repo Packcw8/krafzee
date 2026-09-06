@@ -50,6 +50,8 @@ export const listingSelectFields = [
   'description',
   'price',
   'image_url',
+  // Include gallery data when available without requiring the new column during rollout.
+  '*',
   'market_type',
   'category',
   'item_type',
